@@ -71,8 +71,6 @@ func remisionPDF(w http.ResponseWriter, r *http.Request) {
 func ageneralPDF(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	pdf := gofpdf.New("P", "pt", "letter", "")
-	pdf.AddFont("Open Sans", "", "OpenSans-Regular.json")
-	pdf.AddFont("Open Sans", "B", "OpenSans-Bold.json")
 	pdf.AddPage()
 	pdf.Image("frenteFormatoHistoria.png", 0, 0, 612, 792, false, "png", 0, "")
 	pdf.SetFont("Helvetica", "", 14)
