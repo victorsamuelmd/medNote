@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <title>MedNote | Formato Remisión</title>
+        <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
+    </head>
+    <body>
+            <div class="pure-g">
+                <div class="pure-u-1">
+                    <form action="/remision" method="post" accept-charset="utf-8" class="pure-form pure-form-stacked" target="_blank">
+                        <div class="pure-form-group">
+                            <label for="">Primer Nombre:</label>
+                            <input type="text" name="pnombre">
+                            <label for="">Segundo Nombre:</label>
+                            <input type="text" name="snombre">
+                            <label for="">Primer Apellido:</label>
+                            <input type="text" name="papellido">
+                            <label for="">Segundo Apellido:</label>
+                            <input type="text" name="sapellido">
+                            <label for="">Cédula:</label>
+                            <input type="text" name="cedula">
+                            <label for="">Género:</label>
+                            <span>Masculino: </span><input type="radio" name="genero" value="m">
+                            <span>Femenino: </span><input type="radio" name="genero" value="f">
+                            <label for="">Edad:</label>
+                            <input type="number" name="edad">
+                            <label for="">EPS:</label>
+                            <input type="text" name="eps">
+                            <label for="">Servicio:</label>
+                            <input type="text" name="servicio">
+                        </div>
+                        <label for="">Contenido remision</label>
+                        <textarea id="" class="pure-input-1" name="contenido" cols="30" rows="5"></textarea>
+                        <button type="submit" class="pure-button pure-button-primary">Imprimir</button>
+                    </form>
+                </div>
+            </div>
+    </body>
+</html>
