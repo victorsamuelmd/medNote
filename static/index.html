@@ -4,6 +4,7 @@
         <meta charset="utf-8">
         <title>MedNote</title>
         <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
+        <script src="//code.jquery.com/jquery-1.12.0.min.js"></script>
     </head>
     <body>
         <div class="pure-g">
@@ -42,8 +43,33 @@ Farmacológicos:
                     <label for="">Revisión por Sistemas</label>
                     <textarea id="" class="pure-input-1" name="rsistemas" cols="30" rows="3"></textarea>
                     <label for="">Exámen físico</label>
+                    <!-- signos vitales -->
+                    <fieldset>
+                    <div class="pure-form-aligned">
+                        <div class="pure-control-group">
+                    <label for="tsistolica">Tensión sistólica</label>
+                    <input type="number" name="tsistolica" id="tsistolica">
+                        </div>
+                    <label for="">Tensión diastólica</label>
+                    <input type="number" name="tdiastolica">
+                    <label for="">Frecuencia Cardiaca</label>
+                    <input type="number" name="fcardiaca">
+                    <label for="">Frecuencia Respiratoria</label>
+                    <input type="number" name="frespiratoria">
+                    <label for="">Temperatura</label>
+                    <input type="number" name="temperatura">
+                    <label for="">Saturación Oxígeno</label>
+                    <input type="number" name="saturacion">
+                    <label for="">Peso</label>
+                    <input type="number" name="peso" id="peso">
+                    <label for="">Talla</label>
+                    <input type="text" name="talla" id="talla">
+                    <label for="">IMC:</label>
+                    <input type="text" name="imc" id="imc">
+                    </div>
+                    <fieldset>
+
                     <textarea id="" class="pure-input-1" name="efisico" cols="30" rows="5">
-TA: 110/60 FC: 75 FR: 16 T: 36 Peso:  Talla: 1. IMC:
 Buenas condiciones generales, consciente, orientado, hidratado. Escleras anictéricas, conjuntivas rosadas. Pupilas isocóricas, reaccionan de manera normal a la luz. Mucosa oral húmeda. Cuello móvil, sin adenopatías palpables. Ruidos cardiacos rítmicos sin soplos, campos pulmonares ventilados sin ruidos sobreagregados. Abdomen blando, depresible, no doloroso a la palpación, sin signos de irritación peritoneal. Extremidades móviles, sin edemas. Sin déficit motor o sensitivo aparente. Afecto modulado.
                     </textarea>
                     <label for="">Análisis</label>
@@ -56,5 +82,24 @@ Buenas condiciones generales, consciente, orientado, hidratado. Escleras anicté
                 </form>    
             </div>
         </div>
+        <script>
+(function(){
+    'use strict';
+    var peso, talla, imc, showIMC;
+
+    imc = function(peso, talla){
+        return peso/(talla*talla);
+    }
+
+    showIMC = function(){
+        peso = $('#peso').val();
+        talla = $('#talla').val();
+        $('#imc').val(imc(peso,talla));
+    }
+    
+    $('#talla').blur(showIMC);
+
+})();
+        </script>
     </body>
 </html>

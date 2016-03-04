@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/jung-kurt/gofpdf"
@@ -17,6 +18,7 @@ func main() {
 	mux.HandleFunc("/pdf", ageneralPDF)
 	mux.HandleFunc("/json", consultaJson)
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	mux.Handle("/dist/", http.StripPrefix("/dist/", http.FileServer(http.Dir("./dist"))))
 	mux.HandleFunc("/remision", remisionPDF)
 	mux.HandleFunc("/urgencia", urgenciaPDF)
 	http.ListenAndServe(":8000", mux)
@@ -102,6 +104,17 @@ func ageneralPDF(w http.ResponseWriter, r *http.Request) {
 	WriteItem("Enfermedad Actual: ", r.FormValue("eactual"), pdf)
 	WriteItem("Antecedentes: ", r.FormValue("antecedentes"), pdf)
 	WriteItem("Revisión por Sistemas: ", r.FormValue("rsistemas"), pdf)
+	WriteItem("Signos Vitales: ", fmt.Sprintf("TA: %v/%v FC: %v FR: %v T: %v SPO2: %v Peso: %v Talla: %v IMC: %.2f",
+		r.FormValue("tsistolica"),
+		r.FormValue("tdiastolica"),
+		r.FormValue("fcardiaca"),
+		r.FormValue("frespiratoria"),
+		r.FormValue("temperatura"),
+		r.FormValue("saturacion"),
+		r.FormValue("peso"),
+		r.FormValue("talla"),
+		func() float64 { v, _ := strconv.ParseFloat(r.FormValue("imc"), 64); return v }()),
+		pdf)
 	WriteItem("Exámen Físico: ", r.FormValue("efisico"), pdf)
 	WriteItem("Análisis: ", r.FormValue("analisis"), pdf)
 	WriteItem("Diagnósticos: ", r.FormValue("diagnostico"), pdf)
