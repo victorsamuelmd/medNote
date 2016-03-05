@@ -8,24 +8,42 @@
     </head>
     <body>
         <div class="pure-g">
-            <div class="pure-u-1">
+            <div class="pure-u-1-4">
+            </div>
+            <div class="pure-u-1-2">
                 <form action="/pdf" method="post" accept-charset="utf-8" class="pure-form pure-form-stacked" target="_blank">
                     <div class="pure-form-group">
-                        <label for="">Primer Nombre:</label>
-                        <input type="text" name="pnombre">
-                        <label for="">Segundo Nombre:</label>
-                        <input type="text" name="snombre">
-                        <label for="">Primer Apellido:</label>
-                        <input type="text" name="papellido">
-                        <label for="">Segundo Apellido:</label>
-                        <input type="text" name="sapellido">
-                        <label for="">Cédula:</label>
-                        <input type="text" name="cedula">
-                        <label for="">Género:</label>
-                        <span>Masculino: </span><input type="radio" name="genero" value="m">
-                        <span>Femenino: </span><input type="radio" name="genero" value="f">
-                        <label for="">Edad:</label>
-                        <input type="number" name="edad">
+                        <div class="pure-g">
+                            <div class="pure-u-1-3">
+                                <label for="">Primer Nombre:</label>
+                                <input type="text" name="pnombre" class="pure-u-23-24" placeholder="Primer Nombre">
+                            </div>
+                            <div class="pure-u-1-3">
+                                <label for="">Segundo Nombre:</label>
+                                <input type="text" name="snombre" class="pure-u-23-24">
+                            </div>
+                            <div class="pure-u-1-3">
+                                <label for="">Primer Apellido:</label>
+                                <input type="text" name="papellido" class="pure-u-23-24">
+                            </div>
+                            <div class="pure-u-1-3">
+                                <label for="">Segundo Apellido:</label>
+                                <input type="text" name="sapellido" class="pure-u-23-24">
+                            </div>
+                            <div class="pure-u-1-3">
+                                <label for="">Cédula:</label>
+                                <input type="text" name="cedula" class="pure-u-23-24">
+                            </div>
+                            <div class="pure-u-1-3">
+                                <label for="">Edad:</label>
+                                <input type="number" name="edad" class="pure-u-23-24">
+                            </div>
+                            <div class="pure-u-1-3" class="pure-u-23-24">
+                                <label for="">Género:</label>
+                                <span>Masculino: </span><input type="radio" name="genero" value="m">
+                                <span>Femenino: </span><input type="radio" name="genero" value="f">
+                            </div>
+                        </div>
                     </div>
                     <label for="">Motivo de Consulta</label>
                     <textarea id="" class="pure-input-1" name="mconsulta" cols="30" rows="1"></textarea>
@@ -44,32 +62,45 @@ Farmacológicos:
                     <textarea id="" class="pure-input-1" name="rsistemas" cols="30" rows="3"></textarea>
                     <label for="">Exámen físico</label>
                     <!-- signos vitales -->
-                    <fieldset>
-                    <div class="pure-form-aligned">
-                        <div class="pure-control-group">
-                    <label for="tsistolica">Tensión sistólica</label>
-                    <input type="number" name="tsistolica" id="tsistolica">
+                    <div class="pure-g">
+                        <div class="pure-u-1-3">
+                            <label for="tsistolica">Tensión sistólica</label>
+                            <input type="number" name="tsistolica" id="tsistolica" class="pure-u-23-24">
                         </div>
-                    <label for="">Tensión diastólica</label>
-                    <input type="number" name="tdiastolica">
-                    <label for="">Frecuencia Cardiaca</label>
-                    <input type="number" name="fcardiaca">
-                    <label for="">Frecuencia Respiratoria</label>
-                    <input type="number" name="frespiratoria">
-                    <label for="">Temperatura</label>
-                    <input type="number" name="temperatura">
-                    <label for="">Saturación Oxígeno</label>
-                    <input type="number" name="saturacion">
-                    <label for="">Peso</label>
-                    <input type="number" name="peso" id="peso">
-                    <label for="">Talla</label>
-                    <input type="text" name="talla" id="talla">
-                    <label for="">IMC:</label>
-                    <input type="text" name="imc" id="imc">
+                        <div class="pure-u-1-3">
+                            <label for="">Tensión diastólica</label>
+                            <input type="number" name="tdiastolica" class="pure-u-23-24">
+                        </div>
+                        <div class="pure-u-1-3">
+                            <label for="">Frecuencia Cardiaca</label>
+                            <input type="number" name="fcardiaca" class="pure-u-23-24">
+                        </div>
+                        <div class="pure-u-1-3">
+                            <label for="">Frecuencia Respiratoria</label>
+                            <input type="number" name="frespiratoria" class="pure-u-23-24">
+                        </div>
+                        <div class="pure-u-1-3">
+                            <label for="">Temperatura</label>
+                            <input type="number" name="temperatura" class="pure-u-23-24">
+                        </div>
+                        <div class="pure-u-1-3">
+                            <label for="">Saturación Oxígeno</label>
+                            <input type="number" name="saturacion" class="pure-u-23-24">
+                        </div>
+                        <div class="pure-u-1-3">
+                            <label for="">Peso</label>
+                            <input type="number" name="peso" id="peso" class="pure-u-23-24">
+                        </div>
+                        <div class="pure-u-1-3">
+                            <label for="">Talla</label>
+                            <input type="text" name="talla" id="talla" class="pure-u-23-24">
+                        </div>
+                        <div class="pure-u-1-3">
+                            <label for="">IMC:</label>
+                            <input type="text" name="imc" id="imc" class="pure-u-23-24">
+                        </div>
                     </div>
-                    <fieldset>
-
-                    <textarea id="" class="pure-input-1" name="efisico" cols="30" rows="5">
+                    <textarea id="" class="pure-input-1" name="efisico" cols="30" rows="8">
 Buenas condiciones generales, consciente, orientado, hidratado. Escleras anictéricas, conjuntivas rosadas. Pupilas isocóricas, reaccionan de manera normal a la luz. Mucosa oral húmeda. Cuello móvil, sin adenopatías palpables. Ruidos cardiacos rítmicos sin soplos, campos pulmonares ventilados sin ruidos sobreagregados. Abdomen blando, depresible, no doloroso a la palpación, sin signos de irritación peritoneal. Extremidades móviles, sin edemas. Sin déficit motor o sensitivo aparente. Afecto modulado.
                     </textarea>
                     <label for="">Análisis</label>
