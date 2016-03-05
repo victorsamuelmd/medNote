@@ -21,7 +21,11 @@ func main() {
 	mux.Handle("/dist/", http.StripPrefix("/dist/", http.FileServer(http.Dir("./dist"))))
 	mux.HandleFunc("/remision", remisionPDF)
 	mux.HandleFunc("/urgencia", urgenciaPDF)
-	http.ListenAndServe(":8000", mux)
+	if err := http.ListenAndServe(":8000", mux); err != nil {
+		fmt.Print(err.Error())
+	} else {
+		fmt.Println("Listening on localhost:8000, Hola mari")
+	}
 }
 
 func consultaJson(w http.ResponseWriter, r *http.Request) {
