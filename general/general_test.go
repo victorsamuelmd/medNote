@@ -4,22 +4,22 @@ import "testing"
 
 func TestNew(t *testing.T) {
 	jsonString := `{
-		"Mconsulta":"un motivo",
-		"Eactual":"enfermo",
-		"Antecedentes":{
+		"motivo-consulta":"un motivo",
+		"enfermedad-actual":"enfermo",
+		"antecedentes":{
 			"Patológicos":"No refiere",
 			"Ginecobstétricos":"No refiere"
 		},
-		"Rsistemas":"No refiere",
-		"Efisico":{
-			"SVitales": {
+		"revision-sistemas":"No refiere",
+		"examen-fisico":{
+			"signos-vitales": {
 				"Sistólica":"180",
 				"Diastólica":"90"
 			},
-			"Contenido": "Buenas condiciones generales"
+			"contenido": "Buenas condiciones generales"
 		},
-		"Diagnostico":{},
-		"Analisis":"Esta enfermo"}`
+		"diagnosticos":{},
+		"analisis":"Esta enfermo"}`
 	hc, err := New(jsonString)
 	if err != nil {
 		t.Log(err.Error())

@@ -4,7 +4,6 @@
         <meta charset="utf-8">
         <title>MedNote</title>
         <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
-        <script src="//code.jquery.com/jquery-1.12.0.min.js"></script>
     </head>
     <body>
         <div class="pure-g">
@@ -31,7 +30,7 @@
                                 <input type="text" name="sapellido" class="pure-u-23-24">
                             </div>
                             <div class="pure-u-1-3">
-                                <label for="">Cédula:</label>
+                                <label for="">Número de Identificación:</label>
                                 <input type="text" name="cedula" class="pure-u-23-24">
                             </div>
                             <div class="pure-u-1-3">
@@ -116,19 +115,20 @@ Buenas condiciones generales, consciente, orientado, hidratado. Escleras anicté
         <script>
 (function(){
     'use strict';
-    var peso, talla, imc, showIMC;
+    var imc, showIMC;
 
     imc = function(peso, talla){
         return peso/(talla*talla);
     }
 
     showIMC = function(){
-        peso = $('#peso').val();
-        talla = $('#talla').val();
-        $('#imc').val(imc(peso,talla));
+        var peso, talla;
+        peso = document.querySelector('#peso').value;
+        talla = document.querySelector('#talla').value;
+        document.querySelector('#imc').value = imc(peso, talla);
     }
-    
-    $('#talla').blur(showIMC);
+
+    document.querySelector('#talla').addEventListener('blur', showIMC);
 
 })();
         </script>

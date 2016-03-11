@@ -3,18 +3,23 @@ package general
 import "encoding/json"
 
 type ConsultaGeneral struct {
-	Mconsulta    string
-	Eactual      string
-	Antecedentes map[string]string
-	Rsistemas    string
-	Efisico      Exfisico
-	Diagnostico  map[string]string
-	Analisis     string
+	ID           string            `json:"id-consulta"`
+	MID          string            `json:"id-medico"`
+	PID          string            `json:"id-paciente"`
+	Mconsulta    string            `json:"motivo-consulta"`
+	Eactual      string            `json:"enfermedad-actual"`
+	Antecedentes map[string]string `json:"antecedentes"`
+	Rsistemas    string            `json:"revision-sistemas"`
+	Efisico      efisico           `json:"examen-fisico"`
+	Diagnosticos map[string]string `json:"diagnosticos"`
+	Analisis     string            `json:"analisis"`
+	HoraInicio   string            `json:"hora-inicio"`
+	HoraFinal    string            `json:"hora-final"`
 }
 
-type Exfisico struct {
-	SVitales  map[string]string
-	Contenido string
+type efisico struct {
+	SVitales  map[string]string `json:"signos-vitales"`
+	Contenido string            `json:"contenido"`
 }
 
 func New(j string) (*ConsultaGeneral, error) {
