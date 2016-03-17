@@ -224,7 +224,7 @@ func formulaPDF(w http.ResponseWriter, r *http.Request) {
 		translator(r.FormValue("cedula")),
 		translator(r.FormValue("centro-salud")),
 		translator(r.FormValue("eps")),
-		translator(r.FormValue("receta")),
+		translator(r.FormValue("conducta")),
 	}
 
 	pdf := gofpdf.NewCustom(&gofpdf.InitType{
