@@ -110,27 +110,10 @@ Buenas condiciones generales, consciente, orientado, hidratado. Escleras anicté
                     <textarea id="" class="pure-input-1" name="conducta" cols="30" rows="10"></textarea>
                     <button type="submit" class="pure-button pure-button-primary">Imprimir</button>
                 </form>    
+                
+                    <button class="pure-button pure-button-primary" id="formula-pdf">Formula</button>
             </div>
         </div>
-        <script>
-(function(){
-    'use strict';
-    var imc, showIMC;
-
-    imc = function(peso, talla){
-        return peso/(talla*talla);
-    }
-
-    showIMC = function(){
-        var peso, talla;
-        peso = document.querySelector('#peso').value;
-        talla = document.querySelector('#talla').value;
-        document.querySelector('#imc').value = imc(peso, talla);
-    }
-
-    document.querySelector('#talla').addEventListener('blur', showIMC);
-
-})();
-        </script>
+        <script src="app.js"></script>
     </body>
 </html>

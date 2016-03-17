@@ -15,17 +15,25 @@ var translator, _ = gofpdf.UnicodeTranslatorFromFile("iso-8859-1.map")
 
 func main() {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/pdf", ageneralPDF)
+	mux.HandleFunc("/pdf", logger(ageneralPDF))
 	mux.HandleFunc("/json", consultaJson)
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 	mux.Handle("/dist/", http.StripPrefix("/dist/", http.FileServer(http.Dir("./dist"))))
-	mux.HandleFunc("/remision", remisionPDF)
-	mux.HandleFunc("/urgencia", urgenciaPDF)
+	mux.HandleFunc("/remision", logger(remisionPDF))
+	mux.HandleFunc("/urgencia", logger(urgenciaPDF))
+	mux.HandleFunc("/formula", logger(formulaPDF))
 	fmt.Println("Listening on localhost:8000, Hola mari")
 	if err := http.ListenAndServe(":8000", mux); err != nil {
 		fmt.Print(err.Error())
 	} else {
 		fmt.Println("Listening on localhost:8000, Hola mari")
+	}
+}
+
+func logger(f http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Printf("\033[1m[%s] %s\033[0m", time.Now().Format(time.Stamp), r.RequestURI)
+		f.ServeHTTP(w, r)
 	}
 }
 
@@ -79,12 +87,14 @@ func ageneralPDF(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	pdf := gofpdf.New("P", "pt", "letter", "")
 	pdf.AddPage()
-	pdf.Image("frenteFormatoHistoria.png", 0, 0, 612, 792, false, "png", 0, "")
+	pdf.Image("frenteFormatoHistoria.png",
+		0, 0, 612, 792, false, "png", 0, "")
 	pdf.SetFont("Helvetica", "", 14)
 	pdf.Text(440, 195, translator(r.FormValue("cedula")))
 	pdf.Text(40, 185, translator(r.FormValue("papellido")))
 	pdf.Text(180, 185, translator(r.FormValue("sapellido")))
-	pdf.Text(300, 185, translator(fmt.Sprintf("%s %s", r.FormValue("pnombre"), r.FormValue("snombre"))))
+	pdf.Text(300, 185, translator(fmt.Sprintf("%s %s",
+		r.FormValue("pnombre"), r.FormValue("snombre"))))
 	pdf.Text(40, 215, r.FormValue("edad"))
 	if r.FormValue("genero") == "m" {
 		pdf.Text(145, 225, "X")
@@ -93,13 +103,18 @@ func ageneralPDF(w http.ResponseWriter, r *http.Request) {
 	}
 	t := time.Now()
 	tstring := t.Format(time.RFC3339)
-	pdf.SetTitle(fmt.Sprintf("%s %s %s %s %s", r.FormValue("pnombre"), r.FormValue("snombre"), r.FormValue("papellido"), r.FormValue("sapellido"), tstring), true)
+	pdf.SetTitle(fmt.Sprintf("%s %s %s %s %s",
+		r.FormValue("pnombre"),
+		r.FormValue("snombre"),
+		r.FormValue("papellido"),
+		r.FormValue("sapellido"),
+		tstring), true)
 
 	pdf.SetFont("Helvetica", "", 10)
 	pdf.Text(37, 378, tstring[8:10])
 	pdf.Text(62, 378, tstring[5:7])
 	pdf.Text(85, 378, tstring[2:4])
-	pdf.Text(109, 378, fmt.Sprintf("%v:%v", t.Hour(), t.Minute()))
+	pdf.Text(109, 378, t.Format("15:04"))
 	pdf.SetLeftMargin(140)
 	pdf.SetRightMargin(52)
 	pdf.SetTopMargin(80)
@@ -109,16 +124,22 @@ func ageneralPDF(w http.ResponseWriter, r *http.Request) {
 	WriteItem("Enfermedad Actual: ", r.FormValue("eactual"), pdf)
 	WriteItem("Antecedentes: ", r.FormValue("antecedentes"), pdf)
 	WriteItem("Revisión por Sistemas: ", r.FormValue("rsistemas"), pdf)
-	WriteItem("Signos Vitales: ", fmt.Sprintf("TA: %v/%v FC: %v FR: %v T: %v SPO2: %v Peso: %v Talla: %v IMC: %.2f",
-		r.FormValue("tsistolica"),
-		r.FormValue("tdiastolica"),
-		r.FormValue("fcardiaca"),
-		r.FormValue("frespiratoria"),
-		r.FormValue("temperatura"),
-		r.FormValue("saturacion"),
-		r.FormValue("peso"),
-		r.FormValue("talla"),
-		func() float64 { v, _ := strconv.ParseFloat(r.FormValue("imc"), 64); return v }()),
+	WriteItem("Signos Vitales: ",
+		fmt.Sprintf(
+			"TA: %v/%v FC: %v FR: %v T: %v SPO2: %v Peso: %v Talla: %v IMC: %.2f",
+			r.FormValue("tsistolica"),
+			r.FormValue("tdiastolica"),
+			r.FormValue("fcardiaca"),
+			r.FormValue("frespiratoria"),
+			r.FormValue("temperatura"),
+			r.FormValue("saturacion"),
+			r.FormValue("peso"),
+			r.FormValue("talla"),
+			func() float64 {
+				v, _ := strconv.ParseFloat(
+					r.FormValue("imc"), 64)
+				return v
+			}()),
 		pdf)
 	WriteItem("Exámen Físico: ", r.FormValue("efisico"), pdf)
 	WriteItem("Análisis: ", r.FormValue("analisis"), pdf)
@@ -126,7 +147,8 @@ func ageneralPDF(w http.ResponseWriter, r *http.Request) {
 	WriteItem("Conducta: ", r.FormValue("conducta"), pdf)
 
 	if pdf.PageNo() == 2 {
-		pdf.Image("reversoFormatoHistoria.png", 0, 0, 612, 792, false, "png", 0, "")
+		pdf.Image("reversoFormatoHistoria.png",
+			0, 0, 612, 792, false, "png", 0, "")
 	}
 	if err := pdf.Output(w); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -143,7 +165,9 @@ func urgenciaPDF(w http.ResponseWriter, r *http.Request) {
 	pdf.Text(322, 197, translator(r.FormValue("cedula")))
 	pdf.Text(35, 150, translator(r.FormValue("papellido")))
 	pdf.Text(180, 150, translator(r.FormValue("sapellido")))
-	pdf.Text(300, 150, translator(fmt.Sprintf("%s %s", r.FormValue("pnombre"), r.FormValue("snombre"))))
+	pdf.Text(300, 150, translator(fmt.Sprintf("%s %s",
+		r.FormValue("pnombre"),
+		r.FormValue("snombre"))))
 	pdf.Text(68, 214, r.FormValue("edad"))
 	if r.FormValue("genero") == "m" {
 		pdf.Text(296, 214, "X")
@@ -152,7 +176,11 @@ func urgenciaPDF(w http.ResponseWriter, r *http.Request) {
 	}
 	t := time.Now()
 	tstring := t.Format(time.RFC3339)
-	pdf.SetTitle(fmt.Sprintf("%s %s %s %s %s", r.FormValue("pnombre"), r.FormValue("snombre"), r.FormValue("papellido"), r.FormValue("sapellido"), tstring), true)
+	pdf.SetTitle(fmt.Sprintf("%s %s %s %s %s",
+		r.FormValue("pnombre"),
+		r.FormValue("snombre"),
+		r.FormValue("papellido"),
+		r.FormValue("sapellido"), tstring), true)
 	pdf.SetFont("Helvetica", "", 10)
 	pdf.Text(39, 340, tstring[8:10])
 	pdf.Text(77, 340, tstring[5:7])
@@ -163,19 +191,56 @@ func urgenciaPDF(w http.ResponseWriter, r *http.Request) {
 	pdf.SetRightMargin(45)
 	pdf.SetY(380)
 
-	WriteItemMargin("Motivo de Consulta: ", r.FormValue("mconsulta"), pdf, 15.748)
-	WriteItemMargin("Enfermedad Actual: ", r.FormValue("eactual"), pdf, 15.748)
-	WriteItemMargin("Antecedentes: ", r.FormValue("antecedentes"), pdf, 15.748)
-	WriteItemMargin("Revisión por Sistemas: ", r.FormValue("rsistemas"), pdf, 15.748)
-	WriteItemMargin("Exámen Físico: ", r.FormValue("efisico"), pdf, 15.748)
-	WriteItemMargin("Análisis: ", r.FormValue("analisis"), pdf, 15.748)
-	WriteItemMargin("Diagnósticos: ", r.FormValue("diagnostico"), pdf, 15.748)
-	WriteItemMargin("Conducta: ", r.FormValue("conducta"), pdf, 15.748)
+	WriteItemMargin("Motivo de Consulta: ",
+		r.FormValue("mconsulta"), pdf, 15.748)
+	WriteItemMargin("Enfermedad Actual: ",
+		r.FormValue("eactual"), pdf, 15.748)
+	WriteItemMargin("Antecedentes: ",
+		r.FormValue("antecedentes"), pdf, 15.748)
+	WriteItemMargin("Revisión por Sistemas: ",
+		r.FormValue("rsistemas"), pdf, 15.748)
+	WriteItemMargin("Exámen Físico: ",
+		r.FormValue("efisico"), pdf, 15.748)
+	WriteItemMargin("Análisis: ",
+		r.FormValue("analisis"), pdf, 15.748)
+	WriteItemMargin("Diagnósticos: ",
+		r.FormValue("diagnostico"), pdf, 15.748)
+	WriteItemMargin("Conducta: ",
+		r.FormValue("conducta"), pdf, 15.748)
 
 	if err := pdf.Output(w); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
+}
+
+func formulaPDF(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	f := &Formula{
+		r.FormValue("nombre"),
+		r.FormValue("id"),
+		r.FormValue("centro-salud"),
+		r.FormValue("eps"),
+		translator(r.FormValue("receta")),
+	}
+
+	pdf := gofpdf.NewCustom(&gofpdf.InitType{
+		UnitStr:    "pt",
+		Size:       gofpdf.SizeType{396, 612},
+		FontDirStr: "",
+	})
+
+	pdf.SetFont("Helvetica", "", 14)
+	pdf.AddPage()
+	pdf.Text(220, 84, f.Id)
+	t := time.Now()
+	pdf.Text(60, 106, t.Format("2006  01  02"))
+	pdf.Text(240, 106, f.CentroSalud)
+	pdf.Text(55, 128, f.Nombre)
+	pdf.Text(65, 170, f.EPS)
+	pdf.SetY(200)
+	pdf.Write(16, f.Receta)
+	pdf.Output(w)
 }
 
 func WriteItem(t, d string, pdf *gofpdf.Fpdf) {
@@ -192,4 +257,12 @@ func WriteItemMargin(t, d string, pdf *gofpdf.Fpdf, m float64) {
 	pdf.SetFont("Helvetica", "", 10)
 	pdf.Write(m, translator(d))
 	pdf.Ln(m)
+}
+
+type Formula struct {
+	Nombre      string `json:"nombre"`
+	Id          string `json:"id"`
+	CentroSalud string `json:"centro-salud"`
+	EPS         string `json:"eps"`
+	Receta      string `json:"receta"`
 }
