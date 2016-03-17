@@ -32,7 +32,7 @@ func main() {
 
 func logger(f http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("\033[1m[%s] %s\033[0m", time.Now().Format(time.Stamp), r.RequestURI)
+		fmt.Printf("\033[30m[%s] %s\033[0m\n", time.Now().Format(time.Stamp), r.RequestURI)
 		f.ServeHTTP(w, r)
 	}
 }
@@ -217,10 +217,13 @@ func urgenciaPDF(w http.ResponseWriter, r *http.Request) {
 func formulaPDF(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	f := &Formula{
-		r.FormValue("nombre"),
-		r.FormValue("id"),
-		r.FormValue("centro-salud"),
-		r.FormValue("eps"),
+		translator(fmt.Sprintf("%s %s %s %s", r.FormValue("pnombre"),
+			r.FormValue("snombre"),
+			r.FormValue("papellido"),
+			r.FormValue("sapellido"))),
+		translator(r.FormValue("cedula")),
+		translator(r.FormValue("centro-salud")),
+		translator(r.FormValue("eps")),
 		translator(r.FormValue("receta")),
 	}
 
