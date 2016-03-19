@@ -85,6 +85,18 @@ func remisionPDF(w http.ResponseWriter, r *http.Request) {
 
 func ageneralPDF(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
+	t := time.Now()
+	tstring := t.Format(time.RFC3339)
+	name := fmt.Sprintf("%s %s %s %s %s",
+		r.FormValue("pnombre"),
+		r.FormValue("snombre"),
+		r.FormValue("papellido"),
+		r.FormValue("sapellido"),
+		tstring)
+
+	w.Header().Set("Content-Disposition",
+		fmt.Sprintf("filename=\"%s\"", name))
+
 	pdf := gofpdf.New("P", "pt", "letter", "")
 	pdf.AddPage()
 	pdf.Image("frenteFormatoHistoria.png",
@@ -101,15 +113,7 @@ func ageneralPDF(w http.ResponseWriter, r *http.Request) {
 	} else {
 		pdf.Text(180, 225, "X")
 	}
-	t := time.Now()
-	tstring := t.Format(time.RFC3339)
-	pdf.SetTitle(fmt.Sprintf("%s %s %s %s %s",
-		r.FormValue("pnombre"),
-		r.FormValue("snombre"),
-		r.FormValue("papellido"),
-		r.FormValue("sapellido"),
-		tstring), true)
-
+	pdf.SetTitle(name, true)
 	pdf.SetFont("Helvetica", "", 10)
 	pdf.Text(37, 378, tstring[8:10])
 	pdf.Text(62, 378, tstring[5:7])
