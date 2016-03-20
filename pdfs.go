@@ -64,7 +64,7 @@ type Usuario struct {
 	PrimerNombre    string    `json:"primer-nombre"`
 	SegundoNombre   string    `json:"segundo-nombre"`
 	PrimerApellido  string    `json:"primer-apellido"`
-	SegundoApellido string    `json:"primer-apellido"`
+	SegundoApellido string    `json:"segundo-apellido"`
 	Identificacion  string    `json:"identificacion"`
 	TipoId          string    `json:"tipo-identificacion"`
 	Genero          string    `json:"genero"`

@@ -20,15 +20,23 @@ var hacerRemision = function(){
     medico: {
       "primer-nombre": "Victor",
       "segundo-nombre": "Samuel",
+      "primer-apellido": "Mosquera",
+      "segundo-apellido": "Artamonov",
       "identificacion": "1087998004",
       "tipo-identificacion": "CC"
     },
     "paciente": {
-      "primer-nombre": f_data.get('pnombre')
+      "primer-nombre": f_data.get('pnombre'),
+      "segundo-nombre": f_data.get('snombre'),
+      "primer-apellido": f_data.get('papellido'),
+      "segundo-apellido": f_data.get('sapellido'),
+      "fecha-nacimiento": function(){var a = new Date(1987, 07, 16); return RFC3339(a)}()
     },
     "receptor": f_data.get('eps'),
     "servicio": f_data.get('servicio'),
-    "fecha": RFC3339(fecha)
+    "fecha": RFC3339(fecha),
+    "contenido": f_data.get('contenido')
+
   }
   rem = new XMLHttpRequest();
   rem.responseType = "arrayBuffer";
