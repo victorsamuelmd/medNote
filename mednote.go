@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -49,38 +51,12 @@ func consultaJson(w http.ResponseWriter, r *http.Request) {
 }
 
 func remisionPDF(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	pdf := gofpdf.New("P", "pt", "letter", "")
-	pdf.AddPage()
-	pdf.SetFont("Helvetica", "", 14)
-	pdf.Text(64, 156, "Hospital San Juan de Dios")
-	pdf.Text(327, 156, translator(r.FormValue("eps")))
-	pdf.Text(464, 218, translator(r.FormValue("cedula")))
-	pdf.Text(46, 194, translator(r.FormValue("papellido")))
-	pdf.Text(180, 194, translator(r.FormValue("sapellido")))
-	pdf.Text(320, 194, translator(fmt.Sprintf("%s %s", r.FormValue("pnombre"), r.FormValue("snombre"))))
-	pdf.Text(43, 222, r.FormValue("edad"))
-	if r.FormValue("genero") == "m" {
-		pdf.Text(138, 228, "X")
-	} else {
-		pdf.Text(170, 228, "X")
-	}
-	pdf.Text(162, 328, "Victor Samuel Mosquera A.")
-	pdf.Text(366, 328, translator(r.FormValue("servicio")))
-	t := time.Now()
-	tstring := t.Format(time.RFC3339)
-	pdf.SetFont("Helvetica", "", 10)
-	pdf.Text(50, 322, tstring[8:10])
-	pdf.Text(87, 322, tstring[5:7])
-	pdf.Text(126, 322, tstring[2:4])
-	pdf.SetLeftMargin(50)
-	pdf.SetRightMargin(50)
-	pdf.SetY(416)
-	pdf.Write(20, translator(r.FormValue("contenido")))
+	w.Header().Set("Content-Disposition", "inline; filename=\"remision.pdf\"")
+	var b bytes.Buffer
+	pdf := CrearPDFRemision(r.Body)
+	pdf.Output(&b)
 
-	if err := pdf.Output(w); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	fmt.Fprint(w, base64.RawStdEncoding.EncodeToString(b.Bytes()))
 }
 
 func ageneralPDF(w http.ResponseWriter, r *http.Request) {
