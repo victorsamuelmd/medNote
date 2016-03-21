@@ -13,17 +13,22 @@ import (
 	"github.com/victorsamuelmd/mednote/general"
 )
 
-var translator, _ = gofpdf.UnicodeTranslatorFromFile("iso-8859-1.map")
+var utf8toIso, _ = gofpdf.UnicodeTranslatorFromFile("iso-8859-1.map")
 
 func main() {
 	mux := http.NewServeMux()
+
+	mux.Handle("/static/", http.StripPrefix("/static/",
+		http.FileServer(http.Dir("./static"))))
+	mux.Handle("/dist/", http.StripPrefix("/dist/",
+		http.FileServer(http.Dir("./dist"))))
+
 	mux.HandleFunc("/pdf", logger(ageneralPDF))
 	mux.HandleFunc("/json", consultaJson)
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
-	mux.Handle("/dist/", http.StripPrefix("/dist/", http.FileServer(http.Dir("./dist"))))
 	mux.HandleFunc("/remision", logger(remisionPDF))
 	mux.HandleFunc("/urgencia", logger(urgenciaPDF))
 	mux.HandleFunc("/formula", logger(formulaPDF))
+
 	fmt.Println("Listening on localhost:8000, Hola mari")
 	if err := http.ListenAndServe(":8000", mux); err != nil {
 		fmt.Print(err.Error())
@@ -34,7 +39,8 @@ func main() {
 
 func logger(f http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("\033[30m[%s] %s\033[0m\n", time.Now().Format(time.Stamp), r.RequestURI)
+		fmt.Printf("\033[33m[%s] %s\033[0m\n",
+			time.Now().Format(time.Stamp), r.RequestURI)
 		f.ServeHTTP(w, r)
 	}
 }
@@ -51,11 +57,15 @@ func consultaJson(w http.ResponseWriter, r *http.Request) {
 }
 
 func remisionPDF(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Disposition", "inline; filename=\"remision.pdf\"")
+	w.Header().Set("Content-Disposition",
+		"inline; filename=\"remision.pdf\"")
 	var b bytes.Buffer
-	pdf := CrearPDFRemision(r.Body)
+	pdf, err := CrearPDFRemision(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	pdf.Output(&b)
-
 	fmt.Fprint(w, base64.RawStdEncoding.EncodeToString(b.Bytes()))
 }
 
@@ -75,13 +85,13 @@ func ageneralPDF(w http.ResponseWriter, r *http.Request) {
 
 	pdf := gofpdf.New("P", "pt", "letter", "")
 	pdf.AddPage()
-	pdf.Image("frenteFormatoHistoria.png",
-		0, 0, 612, 792, false, "png", 0, "")
+	//	pdf.Image("frenteFormatoHistoria.png",
+	//		0, 0, 612, 792, false, "png", 0, "")
 	pdf.SetFont("Helvetica", "", 14)
-	pdf.Text(440, 195, translator(r.FormValue("cedula")))
-	pdf.Text(40, 185, translator(r.FormValue("papellido")))
-	pdf.Text(180, 185, translator(r.FormValue("sapellido")))
-	pdf.Text(300, 185, translator(fmt.Sprintf("%s %s",
+	pdf.Text(440, 195, utf8toIso(r.FormValue("cedula")))
+	pdf.Text(40, 185, utf8toIso(r.FormValue("papellido")))
+	pdf.Text(180, 185, utf8toIso(r.FormValue("sapellido")))
+	pdf.Text(300, 185, utf8toIso(fmt.Sprintf("%s %s",
 		r.FormValue("pnombre"), r.FormValue("snombre"))))
 	pdf.Text(40, 215, r.FormValue("edad"))
 	if r.FormValue("genero") == "m" {
@@ -127,8 +137,8 @@ func ageneralPDF(w http.ResponseWriter, r *http.Request) {
 	WriteItem("Conducta: ", r.FormValue("conducta"), pdf)
 
 	if pdf.PageNo() == 2 {
-		pdf.Image("reversoFormatoHistoria.png",
-			0, 0, 612, 792, false, "png", 0, "")
+		//		pdf.Image("reversoFormatoHistoria.png",
+		//			0, 0, 612, 792, false, "png", 0, "")
 	}
 	if err := pdf.Output(w); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -141,11 +151,11 @@ func urgenciaPDF(w http.ResponseWriter, r *http.Request) {
 	pdf := gofpdf.New("P", "pt", "legal", "")
 	pdf.AddPage()
 	pdf.SetFont("Helvetica", "", 14)
-	pdf.Text(444, 152, translator(r.FormValue("cedula")))
-	pdf.Text(322, 197, translator(r.FormValue("cedula")))
-	pdf.Text(35, 150, translator(r.FormValue("papellido")))
-	pdf.Text(180, 150, translator(r.FormValue("sapellido")))
-	pdf.Text(300, 150, translator(fmt.Sprintf("%s %s",
+	pdf.Text(444, 152, utf8toIso(r.FormValue("cedula")))
+	pdf.Text(322, 197, utf8toIso(r.FormValue("cedula")))
+	pdf.Text(35, 150, utf8toIso(r.FormValue("papellido")))
+	pdf.Text(180, 150, utf8toIso(r.FormValue("sapellido")))
+	pdf.Text(300, 150, utf8toIso(fmt.Sprintf("%s %s",
 		r.FormValue("pnombre"),
 		r.FormValue("snombre"))))
 	pdf.Text(68, 214, r.FormValue("edad"))
@@ -197,14 +207,14 @@ func urgenciaPDF(w http.ResponseWriter, r *http.Request) {
 func formulaPDF(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	f := &Formula{
-		translator(fmt.Sprintf("%s %s %s %s", r.FormValue("pnombre"),
+		utf8toIso(fmt.Sprintf("%s %s %s %s", r.FormValue("pnombre"),
 			r.FormValue("snombre"),
 			r.FormValue("papellido"),
 			r.FormValue("sapellido"))),
-		translator(r.FormValue("cedula")),
-		translator(r.FormValue("centro-salud")),
-		translator(r.FormValue("eps")),
-		translator(r.FormValue("conducta")),
+		utf8toIso(r.FormValue("cedula")),
+		utf8toIso(r.FormValue("centro-salud")),
+		utf8toIso(r.FormValue("eps")),
+		utf8toIso(r.FormValue("conducta")),
 	}
 
 	pdf := gofpdf.NewCustom(&gofpdf.InitType{
@@ -228,17 +238,17 @@ func formulaPDF(w http.ResponseWriter, r *http.Request) {
 
 func WriteItem(t, d string, pdf *gofpdf.Fpdf) {
 	pdf.SetFont("Helvetica", "B", 10)
-	pdf.Write(18.8, translator(t))
+	pdf.Write(18.8, utf8toIso(t))
 	pdf.SetFont("Helvetica", "", 10)
-	pdf.Write(18.8, translator(d))
+	pdf.Write(18.8, utf8toIso(d))
 	pdf.Ln(18.8)
 }
 
 func WriteItemMargin(t, d string, pdf *gofpdf.Fpdf, m float64) {
 	pdf.SetFont("Helvetica", "B", 10)
-	pdf.Write(m, translator(t))
+	pdf.Write(m, utf8toIso(t))
 	pdf.SetFont("Helvetica", "", 10)
-	pdf.Write(m, translator(d))
+	pdf.Write(m, utf8toIso(d))
 	pdf.Ln(m)
 }
 
