@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8">
         <title>MedNote | Formato Remisión</title>
-        <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
+        <link rel="stylesheet" href="pure.css">
 <style>
 #some {
     height: 800px;
@@ -22,31 +22,44 @@
                     <div class="pure-form-group">
                         <label for="">Primer Nombre:</label>
                         <input type="text" name="pnombre">
+
                         <label for="">Segundo Nombre:</label>
                         <input type="text" name="snombre">
+
                         <label for="">Primer Apellido:</label>
                         <input type="text" name="papellido">
+
                         <label for="">Segundo Apellido:</label>
                         <input type="text" name="sapellido">
+
                         <label for="">Cédula:</label>
                         <input type="text" name="cedula">
+
                         <label for="">Género:</label>
-                        <span>Masculino: </span><input type="radio" name="genero" value="m">
-                        <span>Femenino: </span><input type="radio" name="genero" value="f">
-                        <label for="">Edad:</label>
+                        <span>Masculino: </span>
+                        <input type="radio" name="genero" value="m">
+                        <span>Femenino: </span>
+                        <input type="radio" name="genero" value="f">
+
+                        <label for="">Fecha Nacimiento:</label>
                         <input type="number" name="edad">
+
                         <label for="">EPS:</label>
                         <input type="text" name="eps">
+
                         <label for="">Servicio:</label>
                         <input type="text" name="servicio">
                     </div>
                     <label for="">Contenido remision</label>
-                    <textarea id="" class="pure-input-1" name="contenido" cols="30" rows="5"></textarea>
+                    <textarea id="" class="pure-input-1" 
+                        name="contenido" cols="30" rows="5"></textarea>
                 </form>
-                <button id="remitir">Remitir</button>
+                <button id="remitir"
+                        class="pure-button pure-button-primary">Remitir</button>
             </div>
             <object id="object" type="application/pdf">
-                <embed id="some" src="" type="application/pdf"/ class="pure-u-1-2">
+                <embed id="some" src="" type="application/pdf"
+                    class="pure-u-1-2">
             </object>
         </div>
         <script src="remision.js"></script>
