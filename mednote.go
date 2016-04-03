@@ -81,7 +81,7 @@ func ageneralPDF(w http.ResponseWriter, r *http.Request) {
 		tstring)
 
 	w.Header().Set("Content-Disposition",
-		fmt.Sprintf("filename=\"%s\"", name))
+		fmt.Sprintf("filename=\"%s.pdf\"", name))
 
 	pdf := gofpdf.New("P", "pt", "letter", "")
 	pdf.AddPage()
@@ -172,10 +172,10 @@ func urgenciaPDF(w http.ResponseWriter, r *http.Request) {
 		r.FormValue("papellido"),
 		r.FormValue("sapellido"), tstring), true)
 	pdf.SetFont("Helvetica", "", 10)
-	pdf.Text(39, 340, tstring[8:10])
-	pdf.Text(77, 340, tstring[5:7])
-	pdf.Text(118, 340, fmt.Sprint(t.Year()))
-	pdf.Text(213, 340, fmt.Sprintf("%v   %v", t.Hour(), t.Minute()))
+	//pdf.Text(39, 340, tstring[8:10])
+	//pdf.Text(77, 340, tstring[5:7])
+	//pdf.Text(118, 340, fmt.Sprint(t.Year()))
+	//pdf.Text(213, 340, fmt.Sprintf("%v   %v", t.Hour(), t.Minute()))
 
 	pdf.SetLeftMargin(45)
 	pdf.SetRightMargin(45)
