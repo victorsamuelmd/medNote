@@ -44,7 +44,7 @@
             };
             return data;
         };
-        rem = new XMLHttpRequest();
+        var rem = new XMLHttpRequest();
         rem.responseType = "arrayBuffer";
         rem.onload = function(data) {
             var pdf = "data:application/pdf;base64," + rem.response;
