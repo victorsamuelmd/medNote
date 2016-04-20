@@ -10,16 +10,16 @@ type ConsultaGeneral struct {
 	Eactual      string            `json:"enfermedad-actual"`
 	Antecedentes map[string]string `json:"antecedentes"`
 	Rsistemas    string            `json:"revision-sistemas"`
-	Efisico      efisico           `json:"examen-fisico"`
+
+	Efisico struct {
+		SVitales  map[string]string `json:"signos-vitales"`
+		Contenido string            `json:"contenido"`
+	} `json:"examen-fisico"`
+
 	Diagnosticos map[string]string `json:"diagnosticos"`
 	Analisis     string            `json:"analisis"`
 	HoraInicio   string            `json:"hora-inicio"`
 	HoraFinal    string            `json:"hora-final"`
-}
-
-type efisico struct {
-	SVitales  map[string]string `json:"signos-vitales"`
-	Contenido string            `json:"contenido"`
 }
 
 func New(j string) (*ConsultaGeneral, error) {
