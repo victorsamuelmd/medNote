@@ -12,6 +12,8 @@
         <div class="pure-u-1">
             <form action="/urgencia" method="post" accept-charset="utf-8" class="pure-form pure-form-stacked" target="_blank">
                 <div class="pure-form-group">
+                    <label for="">Fecha consulta:</label>
+                    <input type="date" name="date" id="date">
                     <label for="">Primer Nombre:</label>
                     <input type="text" name="pnombre">
                     <label for="">Segundo Nombre:</label>
@@ -54,6 +56,27 @@ Buenas condiciones generales, consciente, orientado, hidratado. Escleras anicté
             </form>
         </div>
     </div>
+    <script>
+(function(){
+    "use strict";
+
+    function RFC3339(d) {
+        function pad(n) {
+            return n < 10 ? '0' + n : n;
+        }
+        return d.getUTCFullYear() + '-' +
+            pad(d.getMonth() + 1) + '-' +
+            pad(d.getDate()) + 'T' +
+            pad(d.getHours()) + ':' +
+            pad(d.getMinutes()) + ':' +
+            pad(d.getSeconds()) + '-05:00';
+    }
+
+    var inputDate = document.querySelector("#date");
+    var fecha = new Date();
+    inputDate.value = RFC3339(fecha);
+})();
+    </script>
 </body>
 
 </html>

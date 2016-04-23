@@ -164,7 +164,11 @@ func urgenciaPDF(w http.ResponseWriter, r *http.Request) {
 	} else {
 		pdf.Text(321, 214, "X")
 	}
-	t := time.Now()
+	t, err := time.Parse(time.RFC3339, r.FormValue("date"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	tstring := t.Format(time.RFC3339)
 	pdf.SetTitle(fmt.Sprintf("%s %s %s %s %s",
 		r.FormValue("pnombre"),
