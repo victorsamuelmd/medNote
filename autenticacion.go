@@ -1,13 +1,20 @@
 package main
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
+
+var secretKey, _ = rsa.GenerateKey(rand.Reader, 1024)
 
 type Remision struct {
 	Paciente    Usuario   `json:"paciente"`
@@ -37,19 +44,42 @@ type Usuario struct {
 }
 
 func GuardarUsuario(usr *Usuario, db *mgo.Database) error {
-	usr.Contraseña = fmt.Sprintf("%x", sha256.Sum256([]byte(usr.Contraseña)))
-	return db.C("usuario").Insert(usr)
+	c := db.C("usuario")
+	if count, _ := c.Find(
+		bson.M{"nombre_usuario": usr.NombreUsuario}).
+		Count(); count > 0 {
+		return errors.New("El usuario ya existe")
+	}
+	if count, _ := c.Find(
+		bson.M{"identificacion": usr.Identificacion}).
+		Count(); count > 0 {
+		return errors.New("Número de identificacion ya fue utilizado")
+	}
+	usr.Contraseña = crearHashSHA256(usr.Contraseña)
+	return c.Insert(usr)
 }
 
+//TODO: Falta agregar la funcion para determinar grupos o roles.
 func UsuarioAutentico(username, password string, db *mgo.Database) bool {
-	usr := &Usuario{}
-	pwd := fmt.Sprintf("%x", sha256.Sum256([]byte(password)))
-	err := db.C("usuario").Find(bson.M{"nombre_usuario": username,
-		"contrasena": pwd}).One(usr)
-	if err != nil {
+	count, err := db.C("usuario").Find(bson.M{"nombre_usuario": username,
+		"contrasena": crearHashSHA256(password)}).Count()
+
+	if err != nil || count < 1 {
 		return false
 	}
 	return true
+}
+
+func AutenticarUsuario(usr, pwd string, db *mgo.Database) (string, error) {
+	if UsuarioAutentico(usr, pwd, db) {
+		return crearToken(usr, "")
+	} else {
+		return "", errors.New("Nombre de usuario o contraseña invalida")
+	}
+}
+
+func crearHashSHA256(pwd string) string {
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(pwd)))
 }
 
 func (u *Usuario) NombreCompleto() string {
@@ -106,6 +136,23 @@ func isLeap(date time.Time) bool {
 	} else if year%100 == 0 {
 		return false
 	} else if year%4 == 0 {
+		return true
+	}
+	return false
+}
+
+func crearToken(username, authLevel string) (string, error) {
+	token := jwt.New(jwt.SigningMethodRS256)
+	token.Claims["nombre_usuario"] = username
+	token.Claims["grupo"] = authLevel
+
+	return token.SignedString(secretKey)
+}
+
+func validarToken(token string) bool {
+	if token, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+		return secretKey.Public(), nil
+	}); err == nil && token.Valid {
 		return true
 	}
 	return false
