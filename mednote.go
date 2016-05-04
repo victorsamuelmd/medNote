@@ -29,11 +29,9 @@ func main() {
 	mux.HandleFunc("/urgencia", logger(urgenciaPDF))
 	mux.HandleFunc("/formula", logger(formulaPDF))
 
-	fmt.Println("Listening on localhost:8000, Hola mari")
+	fmt.Println("Listening on localhost:8000")
 	if err := http.ListenAndServe(":8000", mux); err != nil {
 		fmt.Print(err.Error())
-	} else {
-		fmt.Println("Listening on localhost:8000, Hola mari")
 	}
 }
 
