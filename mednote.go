@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"gopkg.in/mgo.v2"
+
 	"github.com/jung-kurt/gofpdf"
 	"github.com/victorsamuelmd/mednote/general"
 )
@@ -25,14 +27,26 @@ func main() {
 
 	mux.HandleFunc("/pdf", logger(ageneralPDF))
 	mux.HandleFunc("/json", consultaJson)
-	mux.HandleFunc("/remision", logger(remisionPDF))
+	mux.HandleFunc("/remision", protejer(logger(remisionPDF)))
 	mux.HandleFunc("/urgencia", logger(urgenciaPDF))
 	mux.HandleFunc("/formula", logger(formulaPDF))
+	mux.HandleFunc("/token", token)
+	mux.HandleFunc("/api/usuarios", protejer(usuarios))
 
 	fmt.Println("Listening on localhost:8000")
 	if err := http.ListenAndServe(":8000", mux); err != nil {
 		fmt.Print(err.Error())
 	}
+}
+
+func usuarios(w http.ResponseWriter, r *http.Request) {
+	usrs := `{"data": [
+	{"type": "usuario", "id": "1", "attributes": {"primer_nombre": "Victor"}},
+	{"type": "usuario", "id": "2", "attributes": {"primer_nombre": "Victor"}},
+	{"type": "usuario", "id": "3", "attributes": {"primer_nombre": "Victor"}},
+	{"type": "usuario", "id": "4", "attributes": {"primer_nombre": "Victor"}}
+	]}`
+	fmt.Fprint(w, usrs)
 }
 
 func logger(f http.HandlerFunc) http.HandlerFunc {
@@ -41,6 +55,56 @@ func logger(f http.HandlerFunc) http.HandlerFunc {
 			time.Now().Format(time.Stamp), r.RequestURI)
 		f.ServeHTTP(w, r)
 	}
+}
+
+func protejer(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token := r.Header.Get("Authorization")
+		if len(token) == 0 {
+			http.Error(w, "No autorizado", http.StatusUnauthorized)
+			return
+		}
+		if ok := validarToken(token[7:len(token)]); !ok {
+			http.Error(w, "No autorizado", http.StatusUnauthorized)
+			return
+		}
+		h.ServeHTTP(w, r)
+	}
+}
+
+func token(w http.ResponseWriter, r *http.Request) {
+	session, err := mgo.Dial("localhost:27017")
+	defer session.Close()
+
+	db := session.DB("mednote")
+
+	if err != nil {
+		http.Error(w, "Error interno", http.StatusInternalServerError)
+		return
+	}
+
+	var rd struct {
+		NombreUsuario string `json:"username"`
+		Contraseña    string `json:"password"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&rd); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	token, err := AutenticarUsuario(rd.NombreUsuario, rd.Contraseña, db)
+	if err != nil {
+		http.Error(w, "No autorizado", http.StatusUnauthorized)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(
+		map[string]string{"token": token}); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 }
 
 func consultaJson(w http.ResponseWriter, r *http.Request) {
