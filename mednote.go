@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
@@ -10,8 +11,10 @@ import (
 	"time"
 
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 
 	"github.com/jung-kurt/gofpdf"
+	"github.com/manyminds/api2go/jsonapi"
 	"github.com/victorsamuelmd/mednote/general"
 )
 
@@ -27,11 +30,11 @@ func main() {
 
 	mux.HandleFunc("/pdf", logger(ageneralPDF))
 	mux.HandleFunc("/json", consultaJson)
-	mux.HandleFunc("/remision", protejer(logger(remisionPDF)))
+	mux.HandleFunc("/remision", logger(remisionPDF))
 	mux.HandleFunc("/urgencia", logger(urgenciaPDF))
 	mux.HandleFunc("/formula", logger(formulaPDF))
 	mux.HandleFunc("/token", token)
-	mux.HandleFunc("/api/usuarios", protejer(usuarios))
+	mux.HandleFunc("/api/usuarios", proteger(usuarios))
 
 	fmt.Println("Listening on localhost:8000")
 	if err := http.ListenAndServe(":8000", mux); err != nil {
@@ -40,13 +43,61 @@ func main() {
 }
 
 func usuarios(w http.ResponseWriter, r *http.Request) {
-	usrs := `{"data": [
-	{"type": "usuario", "id": "1", "attributes": {"primer_nombre": "Victor"}},
-	{"type": "usuario", "id": "2", "attributes": {"primer_nombre": "Victor"}},
-	{"type": "usuario", "id": "3", "attributes": {"primer_nombre": "Victor"}},
-	{"type": "usuario", "id": "4", "attributes": {"primer_nombre": "Victor"}}
-	]}`
-	fmt.Fprint(w, usrs)
+	w.Header().Set("Content-Type", "application/vnd.api+json")
+
+	session, err := mgo.Dial("localhost:27017")
+	defer session.Close()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if r.Method == "GET" {
+		var u []Usuario
+		err := session.DB("mednote").C("usuario").Find(bson.M{}).All(&u)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		j, err := jsonapi.Marshal(u)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		_, err = fmt.Fprintf(w, "%s", j)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else if r.Method == "POST" {
+		var j []byte
+		b := bytes.NewBuffer(j)
+		r := bufio.NewReader(r.Body)
+		_, err := r.WriteTo(b)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		u := &Usuario{}
+		err = jsonapi.Unmarshal(b.Bytes(), u)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		err = session.DB("mednote").C("usuario").Insert(u)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		fmt.Fprintf(w, "%s", u)
+	} else {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+	}
 }
 
 func logger(f http.HandlerFunc) http.HandlerFunc {
@@ -57,7 +108,7 @@ func logger(f http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func protejer(h http.HandlerFunc) http.HandlerFunc {
+func proteger(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("Authorization")
 		if len(token) == 0 {

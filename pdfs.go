@@ -8,9 +8,7 @@ import (
 	"github.com/jung-kurt/gofpdf"
 )
 
-// CrearPDFRemision acepta un string que contiene la informacion sobre la
-// remision en formato json y devuelve un objeto gofdf.Fdf con la remisión en
-// formato pdf.
+// CrearPDFRemision crea la remisión en formato pdf
 func CrearPDFRemision(rem io.Reader) (*gofpdf.Fpdf, error) {
 	d := json.NewDecoder(rem)
 	var r Remision

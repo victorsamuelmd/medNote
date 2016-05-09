@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bearbin/go-age"
 	"github.com/dgrijalva/jwt-go"
 
 	"gopkg.in/mgo.v2"
@@ -17,36 +18,62 @@ import (
 var secretKey, _ = rsa.GenerateKey(rand.Reader, 1024)
 
 type Remision struct {
-	Paciente    Usuario   `json:"paciente"`
-	Medico      Usuario   `json:"medico"`
-	Receptor    string    `json:"receptor"`
-	Fecha       time.Time `json:"fecha"`
-	Servicio    string    `json:"servicio"`
-	Contenido   string    `json:"contenido"`
-	Diagnostico string    `json:"diagnostico"`
+	Paciente         Usuario   `json:"paciente" bson:"paciente"`
+	Medico           Usuario   `json:"medico" bson:"medico"`
+	Receptor         string    `json:"receptor bson:"receptor""`
+	Fecha            time.Time `json:"fecha" bson:"fecha"`
+	Servicio         string    `json:"servicio" bson:"servicio"`
+	Contenido        string    `json:"contenido" bson:"contenido"`
+	Diagnostico      string    `json:"diagnostico" bson:"diagnostico"`
+	TelefonoPaciente string    `json:"telefonoPaciente" bson:"telefonoPaciente"`
 }
 
 type Usuario struct {
-	PrimerNombre    string `bson:"primer_nombre"`
-	SegundoNombre   string `json:"segundo_nombre"`
-	PrimerApellido  string `json:"primer_apellido"`
-	SegundoApellido string `json:"segundo_apellido"`
+	PrimerNombre    string `json:"primerNombre" bson:"primerNombre"`
+	SegundoNombre   string `json:"segundoNombre" bson:"segundoNombre"`
+	PrimerApellido  string `json:"primerApellido" bson:"primerApellido"`
+	SegundoApellido string `json:"segundoApellido" bson:"segundoApellido"`
 
-	Identificacion string `json:"identificacion"`
-	TipoId         string `json:"tipo_identificacion"`
+	Identificacion string `json:"identificacion" bson:"identificacion"`
+	TipoId         string `json:"tipoIdentificacion" bson:"tipoIdentificacion"`
 
-	Genero          string    `json:"genero"`
-	FechaNacimiento time.Time `json:"fecha_nacimiento"`
+	Genero          string    `json:"genero" bson:"genero"`
+	FechaNacimiento time.Time `json:"fechaNacimiento" bson:"fechaNacimiento"`
 
-	NombreUsuario string `bson:"nombre_usuario" json:"nombre_usuario"`
-	Contraseña    string `bson:"contrasena" json:"contrasena"`
-	Grupo         string `json:"grupo"`
+	NombreUsuario string `bson:"nombreUsuario" json:"nombreUsuario"`
+	Contraseña    string `bson:"-" json:"-"`
+	Grupo         string `json:"grupo" bson:"grupo"`
+}
+
+func (u *Usuario) NombreCompleto() string {
+	return fmt.Sprintf("%s %s %s %s", u.PrimerNombre,
+		u.SegundoNombre, u.PrimerApellido, u.SegundoApellido)
+}
+
+func (u *Usuario) Nombres() string {
+	return fmt.Sprintf("%s %s", u.PrimerNombre, u.SegundoNombre)
+}
+
+func (u *Usuario) Edad(t time.Time) string {
+	return fmt.Sprint(age.AgeAt(u.FechaNacimiento, t))
+}
+
+func (u Usuario) EntityNamer() string {
+	return "usuario"
+}
+
+func (u Usuario) GetID() string {
+	return crearHashSHA256(fmt.Sprintf("%s%s%s", u.PrimerNombre, u.PrimerApellido, u.Identificacion))
+}
+
+func (u Usuario) SetID(string) error {
+	return nil
 }
 
 func GuardarUsuario(usr *Usuario, db *mgo.Database) error {
 	c := db.C("usuario")
 	if count, _ := c.Find(
-		bson.M{"nombre_usuario": usr.NombreUsuario}).
+		bson.M{"nombreUsuario": usr.NombreUsuario}).
 		Count(); count > 0 {
 		return errors.New("El usuario ya existe")
 	}
@@ -60,8 +87,8 @@ func GuardarUsuario(usr *Usuario, db *mgo.Database) error {
 }
 
 //TODO: Falta agregar la funcion para determinar grupos o roles.
-func UsuarioAutentico(username, password string, db *mgo.Database) bool {
-	count, err := db.C("usuario").Find(bson.M{"nombre_usuario": username,
+func usuarioAutentico(username, password string, db *mgo.Database) bool {
+	count, err := db.C("usuario").Find(bson.M{"nombreUsuario": username,
 		"contrasena": crearHashSHA256(password)}).Count()
 
 	if err != nil || count < 1 {
@@ -71,7 +98,7 @@ func UsuarioAutentico(username, password string, db *mgo.Database) bool {
 }
 
 func AutenticarUsuario(usr, pwd string, db *mgo.Database) (string, error) {
-	if UsuarioAutentico(usr, pwd, db) {
+	if usuarioAutentico(usr, pwd, db) {
 		return crearToken(usr, "")
 	} else {
 		return "", errors.New("Nombre de usuario o contraseña invalida")
@@ -82,68 +109,9 @@ func crearHashSHA256(pwd string) string {
 	return fmt.Sprintf("%x", sha256.Sum256([]byte(pwd)))
 }
 
-func (u *Usuario) NombreCompleto() string {
-	return fmt.Sprintf("%s %s %s %s", u.PrimerNombre,
-		u.SegundoNombre, u.PrimerApellido, u.SegundoApellido)
-}
-
-func (u *Usuario) Nombres() string {
-	return fmt.Sprintf("%s %s", u.PrimerNombre, u.SegundoNombre)
-}
-
-func (u *Usuario) Edad(t time.Time) string {
-	return fmt.Sprint(AgeAt(u.FechaNacimiento, t))
-}
-
-func AgeAt(birthDate time.Time, now time.Time) int {
-	// Get the year number change since the player's birth.
-	years := now.Year() - birthDate.Year()
-
-	// If the date is before the date of birth, then not that many years
-	// have elapsed.
-	birthDay := getAdjustedBirthDay(birthDate, now)
-	if now.YearDay() < birthDay {
-		years -= 1
-	}
-
-	return years
-}
-
-// Age is shorthand for AgeAt(birthDate, time.Now()), and carries the same usage
-// and limitations.
-func Age(birthDate time.Time) int {
-	return AgeAt(birthDate, time.Now())
-}
-
-// Gets the adjusted date of birth to work around leap year differences.
-func getAdjustedBirthDay(birthDate time.Time, now time.Time) int {
-	birthDay := birthDate.YearDay()
-	currentDay := now.YearDay()
-	if isLeap(birthDate) && !isLeap(now) && birthDay >= 60 {
-		return birthDay - 1
-	}
-	if isLeap(now) && !isLeap(birthDate) && currentDay >= 60 {
-		return birthDay + 1
-	}
-	return birthDay
-}
-
-// Works out if a time.Time is in a leap year.
-func isLeap(date time.Time) bool {
-	year := date.Year()
-	if year%400 == 0 {
-		return true
-	} else if year%100 == 0 {
-		return false
-	} else if year%4 == 0 {
-		return true
-	}
-	return false
-}
-
 func crearToken(username, authLevel string) (string, error) {
 	token := jwt.New(jwt.SigningMethodRS256)
-	token.Claims["nombre_usuario"] = username
+	token.Claims["nombreUsuario"] = username
 	token.Claims["grupo"] = authLevel
 
 	return token.SignedString(secretKey)

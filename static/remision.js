@@ -22,23 +22,24 @@
             var f_data = new FormData(document.querySelector('#remisionForm'));
             var data = {
                 'medico': {
-                    'primer-nombre': 'Victor',
-                    'segundo-nombre': 'Samuel',
-                    'primer-apellido': 'Mosquera',
-                    'segundo-apellido': 'A.',
+                    'primerNombre': 'Victor',
+                    'segundoNombre': 'Samuel',
+                    'primerApellido': 'Mosquera',
+                    'segundoApellido': 'A.',
                     'identificacion': '1087998004',
-                    'tipo-identificacion': 'CC'
+                    'tipoIdentificacion': 'CC'
                 },
                 'paciente': {
-                    'primer-nombre': f_data.get('pnombre'),
-                    'segundo-nombre': f_data.get('snombre'),
-                    'primer-apellido': f_data.get('papellido'),
-                    'segundo-apellido': f_data.get('sapellido'),
+                    'primerNombre': f_data.get('pnombre'),
+                    'segundoNombre': f_data.get('snombre'),
+                    'primerApellido': f_data.get('papellido'),
+                    'segundoApellido': f_data.get('sapellido'),
                     "identificacion": f_data.get("cedula"),
-                    'fecha-nacimiento': f_data.get("nacimiento") + "T00:00:00-05:00",
+                    'fechaNacimiento': f_data.get("nacimiento") + "T00:00:00-05:00",
                 },
                 'receptor': f_data.get('eps'),
                 'servicio': f_data.get('servicio'),
+                'telefonoPaciente': f_data.get('telefonoPaciente'),
                 'fecha': RFC3339(fecha),
                 'contenido': f_data.get('contenido')
             };

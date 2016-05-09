@@ -29,21 +29,17 @@ func TestGuardarUsuario(t *testing.T) {
 	defer db.C("usuario").DropCollection()
 
 	if err != nil {
-		log.Fatal(err)
+		t.Errorf("Fallon con error %s", err.Error())
 	}
 
 	result := Usuario{}
-	err = db.C("usuario").Find(bson.M{"primer_nombre": "Victor"}).One(&result)
+	err = db.C("usuario").Find(bson.M{"primerNombre": "Victor"}).One(&result)
 	if err != nil {
-		log.Fatal(err)
+		t.Errorf("Fallo con error %s", err.Error())
 	}
 
 	if result.Identificacion != "1087998004" {
-		t.Fail()
-	}
-
-	if !UsuarioAutentico("victorsamuelmd", "natanata", db) {
-		t.Fail()
+		t.Error("No se encontro el usuario con Identificacion 1087998004")
 	}
 
 }
