@@ -9,31 +9,47 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-func TestGuardarUsuario(t *testing.T) {
-	session, err := mgo.Dial("localhost:27017")
+type datastore struct {
+	session *mgo.Session
+}
+
+func NewDataStore() *datastore {
+	session, err := mgo.Dial(MgoHostStr)
 	if err != nil {
 		panic(err)
 	}
-	defer session.Close()
-
-	// Optional. Switch the session to a monotonic behavior.
 	session.SetMode(mgo.Monotonic, true)
+	return &datastore{session}
+}
 
-	db := session.DB("test")
+func (ds *datastore) Copy() *datastore {
+	return &datastore{ds.session.Copy()}
+}
 
-	err = GuardarUsuario(
-		&Usuario{"Victor", "Samuel", "Mosquera", "Artamonov",
-			"1087998004", "cc", "m", time.Now(),
-			"victorsamuelmd", "natanata", "medico",
-		}, db)
-	defer db.C("usuario").DropCollection()
+var ds = NewDataStore()
+
+func usuarioDePrueba() *Usuario {
+	fechaNac, _ := time.Parse("2006-01-02", "1989-01-28")
+	return &Usuario{"Victor", "Samuel", "Mosquera", "Artamonov",
+		"1087998004", "cc", "m", fechaNac,
+		"victorsamuelmd", "natanata", "medico",
+	}
+}
+
+func TestGuardarUsuario(t *testing.T) {
+	store := ds.Copy()
+	defer store.session.Close()
+	db := ds.session.DB(NombreBaseDatosTest)
+
+	err := GuardarUsuario(usuarioDePrueba(), db)
+	defer db.C(NombreCollecionUsuario).DropCollection()
 
 	if err != nil {
-		t.Errorf("Fallon con error %s", err.Error())
+		t.Errorf("Fallo con error %s", err.Error())
 	}
 
 	result := Usuario{}
-	err = db.C("usuario").Find(bson.M{"primerNombre": "Victor"}).One(&result)
+	err = db.C(NombreCollecionUsuario).Find(bson.M{"primerNombre": "Victor"}).One(&result)
 	if err != nil {
 		t.Errorf("Fallo con error %s", err.Error())
 	}
@@ -45,33 +61,18 @@ func TestGuardarUsuario(t *testing.T) {
 }
 
 func TestGuardarUsuarioRepetido(t *testing.T) {
-	session, err := mgo.Dial("localhost:27017")
-	if err != nil {
-		panic(err)
-	}
-	defer session.Close()
+	store := ds.Copy()
+	defer store.session.Close()
+	db := ds.session.DB(NombreBaseDatosTest)
 
-	// Optional. Switch the session to a monotonic behavior.
-	session.SetMode(mgo.Monotonic, true)
-
-	db := session.DB("test")
-
-	err = GuardarUsuario(
-		&Usuario{"Victor", "Samuel", "Mosquera", "Artamonov",
-			"1087998004", "cc", "m", time.Now(),
-			"victorsamuelmd", "natanata", "medico",
-		}, db)
-	defer db.C("usuario").DropCollection()
+	err := GuardarUsuario(usuarioDePrueba(), db)
+	defer db.C(NombreCollecionUsuario).DropCollection()
 
 	if err != nil {
-		log.Fatal(err)
+		t.Errorf("Fallo con la conexion a la base de datos: %s", err.Error())
 	}
 
-	err = GuardarUsuario(
-		&Usuario{"Victor", "Samuel", "Mosquera", "Artamonov",
-			"1087998004", "cc", "m", time.Now(),
-			"victorsamuelmd", "natanata", "medico",
-		}, db)
+	err = GuardarUsuario(usuarioDePrueba(), db)
 	if err == nil {
 		t.Fail()
 	}
@@ -89,23 +90,12 @@ func TestCrearToken(t *testing.T) {
 }
 
 func TestAutenticarUsuario(t *testing.T) {
-	session, err := mgo.Dial("localhost:27017")
-	if err != nil {
-		panic(err)
-	}
-	defer session.Close()
+	store := ds.Copy()
+	defer store.session.Close()
+	db := ds.session.DB(NombreBaseDatosTest)
 
-	// Optional. Switch the session to a monotonic behavior.
-	session.SetMode(mgo.Monotonic, true)
-
-	db := session.DB("test")
-
-	err = GuardarUsuario(
-		&Usuario{"Victor", "Samuel", "Mosquera", "Artamonov",
-			"1087998004", "cc", "m", time.Now(),
-			"victorsamuelmd", "natanata", "medico",
-		}, db)
-	defer db.C("usuario").DropCollection()
+	err := GuardarUsuario(usuarioDePrueba(), db)
+	defer db.C(NombreCollecionUsuario).DropCollection()
 
 	if err != nil {
 		log.Fatal(err)
@@ -113,6 +103,27 @@ func TestAutenticarUsuario(t *testing.T) {
 
 	token, err := AutenticarUsuario("victorsamuelmd", "natanata", db)
 	if len(token) == 0 || err != nil {
-		t.Fail()
+		t.Error("Falló autenticacion y el token no fue producido")
 	}
+}
+
+func BenchmarkMgoConnectionConcurrent(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		go insertarAlgoEnLaBaseDatos()
+	}
+	ds.session.DB(NombreBaseDatosTest).C("duration").DropCollection()
+}
+
+func BenchmarkMgoConnection(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		insertarAlgoEnLaBaseDatos()
+	}
+	ds.session.DB(NombreBaseDatosTest).C("duration").DropCollection()
+}
+
+func insertarAlgoEnLaBaseDatos() {
+	store := ds.Copy()
+	db := ds.session.DB(NombreBaseDatosTest)
+	db.C("duration").Insert(bson.M{"name": "Some Name"})
+	store.session.Close()
 }

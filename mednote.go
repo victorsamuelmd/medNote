@@ -18,6 +18,14 @@ import (
 	"github.com/victorsamuelmd/mednote/general"
 )
 
+const (
+	MgoHostStr             = "localhost:27017"
+	NombreBaseDatos        = "mednote"
+	NombreCollecionUsuario = "usuario"
+	NombreBaseDatosTest    = "test"
+	NumeroPuertoAplicacion = ":8080"
+)
+
 var utf8toIso, _ = gofpdf.UnicodeTranslatorFromFile("iso-8859-1.map")
 
 func main() {
@@ -37,7 +45,7 @@ func main() {
 	mux.HandleFunc("/api/usuarios", proteger(usuarios))
 
 	fmt.Println("Listening on localhost:8000")
-	if err := http.ListenAndServe(":8000", mux); err != nil {
+	if err := http.ListenAndServe(NumeroPuertoAplicacion, mux); err != nil {
 		fmt.Print(err.Error())
 	}
 }
@@ -45,16 +53,16 @@ func main() {
 func usuarios(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/vnd.api+json")
 
-	session, err := mgo.Dial("localhost:27017")
+	session, err := mgo.Dial(MgoHostStr)
 	defer session.Close()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if r.Method == "GET" {
+	if r.Method == http.MethodGet {
 		var u []Usuario
-		err := session.DB("mednote").C("usuario").Find(bson.M{}).All(&u)
+		err := session.DB(NombreBaseDatos).C(NombreCollecionUsuario).Find(bson.M{}).All(&u)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
@@ -71,7 +79,7 @@ func usuarios(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	} else if r.Method == "POST" {
+	} else if r.Method == http.MethodPost {
 		var j []byte
 		b := bytes.NewBuffer(j)
 		r := bufio.NewReader(r.Body)
@@ -124,10 +132,10 @@ func proteger(h http.HandlerFunc) http.HandlerFunc {
 }
 
 func token(w http.ResponseWriter, r *http.Request) {
-	session, err := mgo.Dial("localhost:27017")
+	session, err := mgo.Dial(MgoHostStr)
 	defer session.Close()
 
-	db := session.DB("mednote")
+	db := session.DB(NombreBaseDatos)
 
 	if err != nil {
 		http.Error(w, "Error interno", http.StatusInternalServerError)

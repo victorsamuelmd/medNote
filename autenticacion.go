@@ -41,7 +41,7 @@ type Usuario struct {
 	FechaNacimiento time.Time `json:"fechaNacimiento" bson:"fechaNacimiento"`
 
 	NombreUsuario string `bson:"nombreUsuario" json:"nombreUsuario"`
-	Contraseña    string `bson:"-" json:"-"`
+	Contraseña    string `bson:"contrasena" json:"contrasena"`
 	Grupo         string `json:"grupo" bson:"grupo"`
 }
 
