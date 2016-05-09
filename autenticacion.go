@@ -41,8 +41,12 @@ type Usuario struct {
 	FechaNacimiento time.Time `json:"fechaNacimiento" bson:"fechaNacimiento"`
 
 	NombreUsuario string `bson:"nombreUsuario" json:"nombreUsuario"`
-	Contraseña    string `bson:"contrasena" json:"contrasena"`
+	Contraseña    string `bson:"contrasena" json:"contrasena,omitempty"`
 	Grupo         string `json:"grupo" bson:"grupo"`
+}
+
+func (u *Usuario) BorrarContraseña() {
+	u.Contraseña = ""
 }
 
 func (u *Usuario) NombreCompleto() string {

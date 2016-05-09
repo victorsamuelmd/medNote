@@ -5,34 +5,23 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
-type datastore struct {
-	session *mgo.Session
-}
-
-func NewDataStore() *datastore {
-	session, err := mgo.Dial(MgoHostStr)
-	if err != nil {
-		panic(err)
-	}
-	session.SetMode(mgo.Monotonic, true)
-	return &datastore{session}
-}
-
-func (ds *datastore) Copy() *datastore {
-	return &datastore{ds.session.Copy()}
-}
-
-var ds = NewDataStore()
-
 func usuarioDePrueba() *Usuario {
 	fechaNac, _ := time.Parse("2006-01-02", "1989-01-28")
-	return &Usuario{"Victor", "Samuel", "Mosquera", "Artamonov",
-		"1087998004", "cc", "m", fechaNac,
-		"victorsamuelmd", "natanata", "medico",
+	return &Usuario{
+		"Victor",
+		"Samuel",
+		"Mosquera",
+		"Artamonov",
+		"1087998004",
+		"cc",
+		"m",
+		fechaNac,
+		"victorsamuelmd",
+		"natanata",
+		"medico",
 	}
 }
 
@@ -74,7 +63,7 @@ func TestGuardarUsuarioRepetido(t *testing.T) {
 
 	err = GuardarUsuario(usuarioDePrueba(), db)
 	if err == nil {
-		t.Fail()
+		t.Errorf("Guardó un usuario con igual Identificacion: %s", err.Error())
 	}
 }
 
@@ -82,10 +71,10 @@ func TestCrearToken(t *testing.T) {
 	tokenInvalido := `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJncnVwbyI6Im1lZGljb3MiLCJub21icmVfdXN1YXJpbyI6InZpY3RvcnNhbXVlbG1kIn0.Y32PB5Ij1iwcPwB7ER6NEPaDrQzM0_hS-osi6c2AXfDGXWWkSBk5ojYeKbq_udSso2u0Bhi4Xj7Fe7Gz1koZeMGq8N9T8isnyYMUNoxw5sv6hADoLYfzHj6U3FIVE_cvdb4xVZ9LFqWm7fvyjWQ_LbkVLrm5tH1PrLbWq5oceis`
 	token, _ := crearToken("victorsamuelmd", "medicos")
 	if !validarToken(token) {
-		t.Fail()
+		t.Error("Fallo al validar el token producido")
 	}
 	if validarToken(tokenInvalido) {
-		t.Fail()
+		t.Error("Fallo al invalidar el token inválido")
 	}
 }
 

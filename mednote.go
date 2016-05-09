@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
-	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/jung-kurt/gofpdf"
@@ -24,9 +24,13 @@ const (
 	NombreCollecionUsuario = "usuario"
 	NombreBaseDatosTest    = "test"
 	NumeroPuertoAplicacion = ":8080"
+	TipoContenidoJSONAPI   = "application/vnd.api+json"
 )
 
-var utf8toIso, _ = gofpdf.UnicodeTranslatorFromFile("iso-8859-1.map")
+var (
+	utf8toIso, _ = gofpdf.UnicodeTranslatorFromFile("iso-8859-1.map")
+	ds           = NewDataStore()
+)
 
 func main() {
 	mux := http.NewServeMux()
@@ -51,21 +55,46 @@ func main() {
 }
 
 func usuarios(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/vnd.api+json")
+	w.Header().Set("Content-Type", TipoContenidoJSONAPI)
+	store := ds.Copy()
+	defer store.session.Close()
 
-	session, err := mgo.Dial(MgoHostStr)
-	defer session.Close()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	usuarioId := r.URL.Query().Get("identificacion")
 
-	if r.Method == http.MethodGet {
-		var u []Usuario
-		err := session.DB(NombreBaseDatos).C(NombreCollecionUsuario).Find(bson.M{}).All(&u)
+	if r.Method == http.MethodGet && len(usuarioId) > 0 {
+		usr := &Usuario{}
+		err := store.session.DB(NombreBaseDatos).
+			C(NombreCollecionUsuario).Find(bson.M{"identificacion": usuarioId}).One(&usr)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
+		}
+
+		j, err := jsonapi.Marshal(usr)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		_, err = fmt.Fprintf(w, "%s", j)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+	} else if r.Method == http.MethodGet {
+		var u []Usuario
+		err := store.session.DB(NombreBaseDatos).
+			C(NombreCollecionUsuario).Find(bson.M{}).All(&u)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		// Borrar las contraseñas para que no sean parte de lo que se
+		// regresa al cliente
+		for key, _ := range u {
+			u[key].BorrarContraseña()
 		}
 
 		j, err := jsonapi.Marshal(u)
@@ -96,7 +125,8 @@ func usuarios(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = session.DB("mednote").C("usuario").Insert(u)
+		err = store.session.DB(NombreBaseDatos).
+			C(NombreCollecionUsuario).Insert(u)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -118,13 +148,17 @@ func logger(f http.HandlerFunc) http.HandlerFunc {
 
 func proteger(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", TipoContenidoJSONAPI)
 		token := r.Header.Get("Authorization")
 		if len(token) == 0 {
-			http.Error(w, "No autorizado", http.StatusUnauthorized)
+			http.Error(w, `{"errors": [{"title": "Fallo autorizacion",
+			"detail": "No fue provisto un token de autorizacion"}]}`,
+				http.StatusUnauthorized)
 			return
 		}
-		if ok := validarToken(token[7:len(token)]); !ok {
-			http.Error(w, "No autorizado", http.StatusUnauthorized)
+		if ok := validarToken(strings.TrimPrefix(token, "Bearer ")); !ok {
+			http.Error(w, `{"errors": [{"title": "Fallo autorizacion",
+			"detail": "El token es inválido"}]}`, http.StatusUnauthorized)
 			return
 		}
 		h.ServeHTTP(w, r)
@@ -132,15 +166,10 @@ func proteger(h http.HandlerFunc) http.HandlerFunc {
 }
 
 func token(w http.ResponseWriter, r *http.Request) {
-	session, err := mgo.Dial(MgoHostStr)
-	defer session.Close()
+	store := ds.Copy()
+	defer store.session.Close()
 
-	db := session.DB(NombreBaseDatos)
-
-	if err != nil {
-		http.Error(w, "Error interno", http.StatusInternalServerError)
-		return
-	}
+	db := store.session.DB(NombreBaseDatos)
 
 	var rd struct {
 		NombreUsuario string `json:"username"`
