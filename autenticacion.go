@@ -20,7 +20,7 @@ var secretKey, _ = rsa.GenerateKey(rand.Reader, 1024)
 type Remision struct {
 	Paciente         Usuario   `json:"paciente" bson:"paciente"`
 	Medico           Usuario   `json:"medico" bson:"medico"`
-	Receptor         string    `json:"receptor bson:"receptor""`
+	Receptor         string    `json:"receptor" bson:"receptor"`
 	Fecha            time.Time `json:"fecha" bson:"fecha"`
 	Servicio         string    `json:"servicio" bson:"servicio"`
 	Contenido        string    `json:"contenido" bson:"contenido"`
@@ -45,10 +45,6 @@ type Usuario struct {
 	Grupo         string `json:"grupo" bson:"grupo"`
 }
 
-func (u *Usuario) BorrarContraseña() {
-	u.Contraseña = ""
-}
-
 func (u *Usuario) NombreCompleto() string {
 	return fmt.Sprintf("%s %s %s %s", u.PrimerNombre,
 		u.SegundoNombre, u.PrimerApellido, u.SegundoApellido)
@@ -62,15 +58,16 @@ func (u *Usuario) Edad(t time.Time) string {
 	return fmt.Sprint(age.AgeAt(u.FechaNacimiento, t))
 }
 
-func (u Usuario) EntityNamer() string {
+func (u *Usuario) EntityNamer() string {
 	return "usuario"
 }
 
-func (u Usuario) GetID() string {
+func (u *Usuario) GetID() string {
 	return crearHashSHA256(fmt.Sprintf("%s%s%s", u.PrimerNombre, u.PrimerApellido, u.Identificacion))
 }
 
-func (u Usuario) SetID(string) error {
+func (u *Usuario) SetID(s string) error {
+	fmt.Println(s)
 	return nil
 }
 
