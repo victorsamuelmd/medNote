@@ -13,7 +13,9 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
+	"github.com/gorilla/mux"
 	"github.com/jung-kurt/gofpdf"
+	"github.com/justinas/alice"
 	"github.com/manyminds/api2go/jsonapi"
 	"github.com/victorsamuelmd/mednote/general"
 )
@@ -23,8 +25,9 @@ const (
 	NombreBaseDatos        = "mednote"
 	NombreCollecionUsuario = "usuario"
 	NombreBaseDatosTest    = "test"
-	NumeroPuertoAplicacion = ":8080"
+	NumeroPuertoAplicacion = ":8000"
 	TipoContenidoJSONAPI   = "application/vnd.api+json"
+	OrigenesConfiables     = "http://localhost:4200"
 )
 
 var (
@@ -33,68 +36,76 @@ var (
 )
 
 func main() {
-	mux := http.NewServeMux()
+	m := mux.NewRouter()
+	router := http.NewServeMux()
 
-	mux.Handle("/static/", http.StripPrefix("/static/",
+	router.Handle("/static/", http.StripPrefix("/static/",
 		http.FileServer(http.Dir("./static"))))
-	mux.Handle("/dist/", http.StripPrefix("/dist/",
+	router.Handle("/dist/", http.StripPrefix("/dist/",
 		http.FileServer(http.Dir("./dist"))))
 
-	mux.HandleFunc("/pdf", logger(ageneralPDF))
-	mux.HandleFunc("/json", consultaJson)
-	mux.HandleFunc("/remision", logger(remisionPDF))
-	mux.HandleFunc("/urgencia", logger(urgenciaPDF))
-	mux.HandleFunc("/formula", logger(formulaPDF))
-	mux.HandleFunc("/token", token)
-	mux.HandleFunc("/api/usuarios", proteger(usuarios))
+	router.Handle("/pdf", alice.New(logger).ThenFunc(ageneralPDF))
+	m.HandleFunc("/remision", remisionPDF)
+	m.HandleFunc("/urgencia", urgenciaPDF)
+	router.HandleFunc("/formula", formulaPDF)
+	m.HandleFunc("/token", token)
+	m.Handle("/api/usuarios/{id:[0-9]{4,14}}", alice.New(proteger).
+		ThenFunc(usuariosGET)).
+		Methods(http.MethodGet)
+
+	m.Handle("/api/usuarios", alice.New(proteger).
+		ThenFunc(usuariosPOST)).
+		Methods(http.MethodPost)
 
 	fmt.Println("Listening on localhost:8000")
-	if err := http.ListenAndServe(NumeroPuertoAplicacion, mux); err != nil {
+	if err := http.ListenAndServe(NumeroPuertoAplicacion, router); err != nil {
 		fmt.Print(err.Error())
 	}
 }
 
-func usuarios(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", TipoContenidoJSONAPI)
+func usuariosGET(w http.ResponseWriter, r *http.Request) {
 	store := ds.Copy()
 	defer store.session.Close()
 
-	usuarioId := r.URL.Query().Get("identificacion")
+	usuarioId := mux.Vars(r)["id"]
 
-	if r.Method == http.MethodGet && len(usuarioId) > 0 {
-		usr := &Usuario{}
-		err := store.session.DB(NombreBaseDatos).
-			C(NombreCollecionUsuario).Find(bson.M{"identificacion": usuarioId}).One(&usr)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
+	usr := &Usuario{}
+	err := store.session.DB(NombreBaseDatos).
+		C(NombreCollecionUsuario).
+		Find(bson.M{"identificacion": usuarioId}).
+		Select(bson.M{"contrasena": 0}).
+		One(&usr)
 
-		j, err := jsonapi.Marshal(usr)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	if err != nil {
+		http.Error(w, fmt.Sprintf(
+			`{"errors": [{"title": "No encontrado", "detail": "%s"}]}`,
+			err.Error()), http.StatusNotFound)
+		return
+	}
 
-		_, err = fmt.Fprintf(w, "%s", j)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	j, err := jsonapi.Marshal(usr)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
+	_, err = fmt.Fprintf(w, "%s", j)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+/*
 	} else if r.Method == http.MethodGet {
 		var u []Usuario
 		err := store.session.DB(NombreBaseDatos).
-			C(NombreCollecionUsuario).Find(bson.M{}).All(&u)
+			C(NombreCollecionUsuario).Find(nil).
+			Select(bson.M{"contrasena": 0}).One(&u)
+
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
-		}
-
-		// Borrar las contraseñas para que no sean parte de lo que se
-		// regresa al cliente
-		for key, _ := range u {
-			u[key].BorrarContraseña()
 		}
 
 		j, err := jsonapi.Marshal(u)
@@ -108,46 +119,48 @@ func usuarios(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	} else if r.Method == http.MethodPost {
-		var j []byte
-		b := bytes.NewBuffer(j)
-		r := bufio.NewReader(r.Body)
-		_, err := r.WriteTo(b)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+*/
 
-		u := &Usuario{}
-		err = jsonapi.Unmarshal(b.Bytes(), u)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+func usuariosPOST(w http.ResponseWriter, r *http.Request) {
+	store := ds.Copy()
+	defer store.session.Close()
 
-		err = store.session.DB(NombreBaseDatos).
-			C(NombreCollecionUsuario).Insert(u)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		fmt.Fprintf(w, "%s", u)
-	} else {
-		http.Error(w, "Bad request", http.StatusBadRequest)
+	var j []byte
+	b := bytes.NewBuffer(j)
+	reader := bufio.NewReader(r.Body)
+	_, err := reader.WriteTo(b)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+
+	u := &Usuario{}
+	err = jsonapi.Unmarshal(b.Bytes(), u)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = store.session.DB(NombreBaseDatos).
+		C(NombreCollecionUsuario).Insert(u)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintf(w, "%s", u)
 }
 
-func logger(f http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func logger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("\033[33m[%s] %s\033[0m\n",
 			time.Now().Format(time.Stamp), r.RequestURI)
-		f.ServeHTTP(w, r)
-	}
+		next.ServeHTTP(w, r)
+	})
 }
 
-func proteger(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func proteger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", TipoContenidoJSONAPI)
 		token := r.Header.Get("Authorization")
 		if len(token) == 0 {
@@ -161,10 +174,32 @@ func proteger(h http.HandlerFunc) http.HandlerFunc {
 			"detail": "El token es inválido"}]}`, http.StatusUnauthorized)
 			return
 		}
-		h.ServeHTTP(w, r)
-	}
+		next.ServeHTTP(w, r)
+	})
 }
 
+// activarCORS configura los encabezados para que se puedan realizar peticiones
+// desde un origen diferente. En caso de que el navegador solicite opciones
+// se comporta adecuadamente.
+func activarCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Access-Control-Allow-Origin", OrigenesConfiables)
+		w.Header().Add("Access-Control-Allow-Methods", http.MethodPost)
+		w.Header().Add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+
+		w.Header().Add("content-type", TipoContenidoJSONAPI)
+		next.ServeHTTP(w, r)
+	})
+}
+
+// token genera un JWT(javascript web token) usado como autorizacion para
+// acceder a la API del servidor, la petición del cliente debe ser un objeto en
+// JSON de la forma {"username": "", "password": ""} y devuelve un el token
+// codificado dentro de un objeto {"token": "<token>"}
 func token(w http.ResponseWriter, r *http.Request) {
 	store := ds.Copy()
 	defer store.session.Close()
@@ -298,6 +333,16 @@ func ageneralPDF(w http.ResponseWriter, r *http.Request) {
 
 func urgenciaPDF(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
+
+	t, err := time.Parse(time.RFC3339, r.FormValue("date"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Disposition",
+		fmt.Sprintf("filename=\"%s.pdf\"", r.FormValue("pnombre")))
+
 	pdf := gofpdf.New("P", "pt", "legal", "")
 	pdf.AddPage()
 	pdf.SetFont("Helvetica", "", 14)
@@ -313,11 +358,6 @@ func urgenciaPDF(w http.ResponseWriter, r *http.Request) {
 		pdf.Text(296, 214, "X")
 	} else {
 		pdf.Text(321, 214, "X")
-	}
-	t, err := time.Parse(time.RFC3339, r.FormValue("date"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
 	}
 	tstring := t.Format(time.RFC3339)
 	pdf.SetTitle(fmt.Sprintf("%s %s %s %s %s",
