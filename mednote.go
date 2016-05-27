@@ -3,14 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/jung-kurt/gofpdf"
-	"github.com/victorsamuelmd/mednote/general"
 )
 
 var (
@@ -30,20 +28,9 @@ func main() {
 	router.HandleFunc("/formula", formulaPDF)
 
 	fmt.Println("Listening on localhost:8000")
-	if err := http.ListenAndServe(":8080", router); err != nil {
+	if err := http.ListenAndServe(":8000", router); err != nil {
 		fmt.Print(err.Error())
 	}
-}
-
-func consultaJson(w http.ResponseWriter, r *http.Request) {
-	dec := json.NewDecoder(r.Body)
-	hc := &general.ConsultaGeneral{}
-	err := dec.Decode(hc)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-	fmt.Fprint(w, hc)
-
 }
 
 func remisionPDF(w http.ResponseWriter, r *http.Request) {
@@ -62,16 +49,14 @@ func remisionPDF(w http.ResponseWriter, r *http.Request) {
 func ageneralPDF(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	t := time.Now()
-	tstring := t.Format(time.RFC3339)
 	name := fmt.Sprintf("%s %s %s %s %s",
 		r.FormValue("pnombre"),
 		r.FormValue("snombre"),
 		r.FormValue("papellido"),
-		r.FormValue("sapellido"),
-		tstring)
+		t.Format(time.RFC3339))
 
 	w.Header().Set("Content-Disposition",
-		fmt.Sprintf("filename=\"%s.pdf\"", name))
+		fmt.Sprintf(`filename="%s.pdf"`, name))
 
 	pdf := gofpdf.New("P", "pt", "letter", "")
 	pdf.AddPage()
@@ -90,9 +75,9 @@ func ageneralPDF(w http.ResponseWriter, r *http.Request) {
 	}
 	pdf.SetTitle(name, true)
 	pdf.SetFont("Helvetica", "", 10)
-	pdf.Text(37, 378, tstring[8:10])
-	pdf.Text(62, 378, tstring[5:7])
-	pdf.Text(85, 378, tstring[2:4])
+	pdf.Text(37, 378, t.Format("02"))
+	pdf.Text(62, 378, t.Format("01"))
+	pdf.Text(85, 378, t.Format("06"))
 	pdf.Text(109, 378, t.Format("15:04"))
 	pdf.SetLeftMargin(140)
 	pdf.SetRightMargin(52)
@@ -139,14 +124,20 @@ func urgenciaPDF(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	usrName := fmt.Sprintf("%s %s %s %s %s",
+		r.FormValue("pnombre"),
+		r.FormValue("snombre"),
+		r.FormValue("papellido"),
+		r.FormValue("sapellido"), t.Format(time.RFC3339))
 
 	w.Header().Set("Content-Disposition",
-		fmt.Sprintf("filename=\"%s.pdf\"", r.FormValue("pnombre")))
+		fmt.Sprintf("filename=\"%s.pdf\"", usrName))
 
 	pdf := gofpdf.NewCustom(
 		&gofpdf.InitType{
 			"P", "pt", "pt",
 			gofpdf.SizeType{625.5, 922.5}, "Helvetica"})
+	pdf.SetTitle(usrName, true)
 	pdf.AddPage()
 	pdf.SetFont("Helvetica", "", 14)
 	pdf.Text(444, 152, utf8toIso(r.FormValue("cedula")))
@@ -162,17 +153,11 @@ func urgenciaPDF(w http.ResponseWriter, r *http.Request) {
 	} else {
 		pdf.Text(321, 214, "X")
 	}
-	tstring := t.Format(time.RFC3339)
-	pdf.SetTitle(fmt.Sprintf("%s %s %s %s %s",
-		r.FormValue("pnombre"),
-		r.FormValue("snombre"),
-		r.FormValue("papellido"),
-		r.FormValue("sapellido"), tstring), true)
 	pdf.SetFont("Helvetica", "", 10)
-	pdf.Text(39, 340, tstring[8:10])
-	pdf.Text(77, 340, tstring[5:7])
-	pdf.Text(118, 340, fmt.Sprint(t.Year()))
-	pdf.Text(213, 340, fmt.Sprintf("%v   %v", t.Hour(), t.Minute()))
+	pdf.Text(39, 340, t.Format("02"))
+	pdf.Text(77, 340, t.Format("01"))
+	pdf.Text(118, 340, t.Format("2006"))
+	pdf.Text(213, 340, t.Format("15   06"))
 
 	pdf.SetLeftMargin(45)
 	pdf.SetRightMargin(45)
