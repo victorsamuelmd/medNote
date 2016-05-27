@@ -17,6 +17,8 @@ import (
 
 var secretKey, _ = rsa.GenerateKey(rand.Reader, 1024)
 
+// Remision contiene la estructura de la información necesaria en caso de una
+// remisión
 type Remision struct {
 	Paciente         Usuario   `json:"paciente" bson:"paciente"`
 	Medico           Usuario   `json:"medico" bson:"medico"`
@@ -28,6 +30,8 @@ type Remision struct {
 	TelefonoPaciente string    `json:"telefonoPaciente" bson:"telefonoPaciente"`
 }
 
+// Usuario contiente la estructura de le información sobre un usuario tanto del
+// sistema como de un paciente
 type Usuario struct {
 	PrimerNombre    string `json:"primerNombre" bson:"primerNombre"`
 	SegundoNombre   string `json:"segundoNombre" bson:"segundoNombre"`
@@ -35,7 +39,7 @@ type Usuario struct {
 	SegundoApellido string `json:"segundoApellido" bson:"segundoApellido"`
 
 	Identificacion string `json:"identificacion" bson:"identificacion"`
-	TipoId         string `json:"tipoIdentificacion" bson:"tipoIdentificacion"`
+	TipoID         string `json:"tipoIdentificacion" bson:"tipoIdentificacion"`
 
 	Genero          string    `json:"genero" bson:"genero"`
 	FechaNacimiento time.Time `json:"fechaNacimiento" bson:"fechaNacimiento"`
@@ -45,32 +49,41 @@ type Usuario struct {
 	Grupo         string `json:"grupo" bson:"grupo"`
 }
 
+// NombreCompleto devuelve el nombre completo del usuario siendo la union de
+// ambos nombres seguido de ambos apellidos
 func (u *Usuario) NombreCompleto() string {
 	return fmt.Sprintf("%s %s %s %s", u.PrimerNombre,
 		u.SegundoNombre, u.PrimerApellido, u.SegundoApellido)
 }
 
+// Nombres devuelve ambos nombres el usuario en un solo texto
 func (u *Usuario) Nombres() string {
 	return fmt.Sprintf("%s %s", u.PrimerNombre, u.SegundoNombre)
 }
 
+// Edad devuelve la edad del usuario en años cumplidos
 func (u *Usuario) Edad(t time.Time) string {
 	return fmt.Sprint(age.AgeAt(u.FechaNacimiento, t))
 }
 
+// EntityNamer es un método para poder usar la librería JSONAPI
 func (u *Usuario) EntityNamer() string {
 	return "usuario"
 }
 
+// GetID es un método para poder usar la librería JSONAPI
 func (u *Usuario) GetID() string {
 	return crearHashSHA256(fmt.Sprintf("%s%s%s", u.PrimerNombre, u.PrimerApellido, u.Identificacion))
 }
 
+// SetID es un método para poder usar la librería JSONAPI
 func (u *Usuario) SetID(s string) error {
 	fmt.Println(s)
 	return nil
 }
 
+// GuardarUsuario en una función que acepta un usuario y una referencia a una
+// Base de datos MongoDB y guarda el usuario en esa base de datos
 func GuardarUsuario(usr *Usuario, db *mgo.Database) error {
 	c := db.C("usuario")
 	if count, _ := c.Find(
@@ -98,12 +111,14 @@ func usuarioAutentico(username, password string, db *mgo.Database) bool {
 	return true
 }
 
+// AutenticarUsuario acepta un nombre de usuario y una contraseña y determina
+// si esa combinación está prensente en la base de datos que se pasa como tercer
+// parámetro
 func AutenticarUsuario(usr, pwd string, db *mgo.Database) (string, error) {
 	if usuarioAutentico(usr, pwd, db) {
 		return crearToken(usr, "")
-	} else {
-		return "", errors.New("Nombre de usuario o contraseña invalida")
 	}
+	return "", errors.New("Nombre de usuario o contraseña invalida")
 }
 
 func crearHashSHA256(pwd string) string {

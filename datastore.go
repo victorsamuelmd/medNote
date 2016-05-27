@@ -9,12 +9,18 @@ import (
 	"io/ioutil"
 )
 
-type datastore struct {
-	session *mgo.Session
+type DataStore struct {
+	Session *mgo.Session
 }
 
-func NewDataStore() *datastore {
-	jsonConf, _ := ioutil.ReadFile("config.json")
+func NewDataStore() *DataStore {
+	jsonConf, err := ioutil.ReadFile("config.json")
+
+	// Si no hay archivo de configuración no debe continuar la aplicación
+	if err != nil {
+		panic(err)
+	}
+
 	var conf struct {
 		Pwd string `json:"pwd"`
 	}
@@ -26,13 +32,15 @@ func NewDataStore() *datastore {
 		Username: "golangApplication",
 		Password: conf.Pwd,
 	})
+
 	if err != nil {
 		panic(err)
 	}
+
 	session.SetMode(mgo.Monotonic, true)
-	return &datastore{session}
+	return &DataStore{session}
 }
 
-func (ds *datastore) Copy() *datastore {
-	return &datastore{ds.session.Copy()}
+func (ds *DataStore) Copy() *DataStore {
+	return &DataStore{ds.Session.Copy()}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"testing"
 	"time"
@@ -25,10 +26,12 @@ func usuarioDePrueba() *Usuario {
 	}
 }
 
+var ds = NewDataStore()
+
 func TestGuardarUsuario(t *testing.T) {
 	store := ds.Copy()
-	defer store.session.Close()
-	db := ds.session.DB(NombreBaseDatosTest)
+	defer store.Session.Close()
+	db := ds.Session.DB(NombreBaseDatosTest)
 
 	err := GuardarUsuario(usuarioDePrueba(), db)
 	defer db.C(NombreCollecionUsuario).DropCollection()
@@ -51,8 +54,8 @@ func TestGuardarUsuario(t *testing.T) {
 
 func TestGuardarUsuarioRepetido(t *testing.T) {
 	store := ds.Copy()
-	defer store.session.Close()
-	db := ds.session.DB(NombreBaseDatosTest)
+	defer store.Session.Close()
+	db := ds.Session.DB(NombreBaseDatosTest)
 
 	err := GuardarUsuario(usuarioDePrueba(), db)
 	defer db.C(NombreCollecionUsuario).DropCollection()
@@ -65,6 +68,11 @@ func TestGuardarUsuarioRepetido(t *testing.T) {
 	if err == nil {
 		t.Errorf("Guardó un usuario con igual Identificacion: %s", err.Error())
 	}
+}
+
+func TestImprimirALaConsola(t *testing.T) {
+	t.Log("Hello")
+	fmt.Println("Hello")
 }
 
 func TestCrearToken(t *testing.T) {
@@ -80,8 +88,8 @@ func TestCrearToken(t *testing.T) {
 
 func TestAutenticarUsuario(t *testing.T) {
 	store := ds.Copy()
-	defer store.session.Close()
-	db := ds.session.DB(NombreBaseDatosTest)
+	defer store.Session.Close()
+	db := ds.Session.DB(NombreBaseDatosTest)
 
 	err := GuardarUsuario(usuarioDePrueba(), db)
 	defer db.C(NombreCollecionUsuario).DropCollection()
@@ -100,19 +108,19 @@ func BenchmarkMgoConnectionConcurrent(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		go insertarAlgoEnLaBaseDatos()
 	}
-	ds.session.DB(NombreBaseDatosTest).C("duration").DropCollection()
+	ds.Session.DB(NombreBaseDatosTest).C("duration").DropCollection()
 }
 
 func BenchmarkMgoConnection(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		insertarAlgoEnLaBaseDatos()
 	}
-	ds.session.DB(NombreBaseDatosTest).C("duration").DropCollection()
+	ds.Session.DB(NombreBaseDatosTest).C("duration").DropCollection()
 }
 
 func insertarAlgoEnLaBaseDatos() {
 	store := ds.Copy()
-	db := ds.session.DB(NombreBaseDatosTest)
+	db := ds.Session.DB(NombreBaseDatosTest)
 	db.C("duration").Insert(bson.M{"name": "Some Name"})
-	store.session.Close()
+	store.Session.Close()
 }

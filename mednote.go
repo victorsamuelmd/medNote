@@ -32,10 +32,12 @@ const (
 
 var (
 	utf8toIso, _ = gofpdf.UnicodeTranslatorFromFile("iso-8859-1.map")
-	ds           = NewDataStore()
 )
 
 func main() {
+
+	var ds = NewDataStore()
+
 	m := mux.NewRouter()
 	router := http.NewServeMux()
 
@@ -45,16 +47,16 @@ func main() {
 		http.FileServer(http.Dir("./dist"))))
 
 	router.Handle("/pdf", alice.New(logger).ThenFunc(ageneralPDF))
-	m.HandleFunc("/remision", remisionPDF)
-	m.HandleFunc("/urgencia", urgenciaPDF)
+	router.HandleFunc("/remision", remisionPDF)
+	router.HandleFunc("/urgencia", urgenciaPDF)
 	router.HandleFunc("/formula", formulaPDF)
-	m.HandleFunc("/token", token)
+	m.HandleFunc("/token", ds.token)
 	m.Handle("/api/usuarios/{id:[0-9]{4,14}}", alice.New(proteger).
-		ThenFunc(usuariosGET)).
+		ThenFunc(ds.usuariosGET)).
 		Methods(http.MethodGet)
 
 	m.Handle("/api/usuarios", alice.New(proteger).
-		ThenFunc(usuariosPOST)).
+		ThenFunc(ds.usuariosPOST)).
 		Methods(http.MethodPost)
 
 	fmt.Println("Listening on localhost:8000")
@@ -63,14 +65,14 @@ func main() {
 	}
 }
 
-func usuariosGET(w http.ResponseWriter, r *http.Request) {
-	store := ds.Copy()
-	defer store.session.Close()
+func (store *DataStore) usuariosGET(w http.ResponseWriter, r *http.Request) {
+	ds := store.Copy()
+	defer ds.Session.Close()
 
 	usuarioId := mux.Vars(r)["id"]
 
 	usr := &Usuario{}
-	err := store.session.DB(NombreBaseDatos).
+	err := ds.Session.DB(NombreBaseDatos).
 		C(NombreCollecionUsuario).
 		Find(bson.M{"identificacion": usuarioId}).
 		Select(bson.M{"contrasena": 0}).
@@ -121,9 +123,9 @@ func usuariosGET(w http.ResponseWriter, r *http.Request) {
 		}
 */
 
-func usuariosPOST(w http.ResponseWriter, r *http.Request) {
-	store := ds.Copy()
-	defer store.session.Close()
+func (store *DataStore) usuariosPOST(w http.ResponseWriter, r *http.Request) {
+	ds := store.Copy()
+	defer ds.Session.Close()
 
 	var j []byte
 	b := bytes.NewBuffer(j)
@@ -141,8 +143,9 @@ func usuariosPOST(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = store.session.DB(NombreBaseDatos).
+	err = ds.Session.DB(NombreBaseDatos).
 		C(NombreCollecionUsuario).Insert(u)
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -200,11 +203,11 @@ func activarCORS(next http.Handler) http.Handler {
 // acceder a la API del servidor, la petición del cliente debe ser un objeto en
 // JSON de la forma {"username": "", "password": ""} y devuelve un el token
 // codificado dentro de un objeto {"token": "<token>"}
-func token(w http.ResponseWriter, r *http.Request) {
-	store := ds.Copy()
-	defer store.session.Close()
+func (store *DataStore) token(w http.ResponseWriter, r *http.Request) {
+	ds := store.Copy()
+	defer ds.Session.Close()
 
-	db := store.session.DB(NombreBaseDatos)
+	db := ds.Session.DB(NombreBaseDatos)
 
 	var rd struct {
 		NombreUsuario string `json:"username"`
@@ -343,7 +346,10 @@ func urgenciaPDF(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition",
 		fmt.Sprintf("filename=\"%s.pdf\"", r.FormValue("pnombre")))
 
-	pdf := gofpdf.New("P", "pt", "legal", "")
+	pdf := gofpdf.NewCustom(
+		&gofpdf.InitType{
+			"P", "pt", "pt",
+			gofpdf.SizeType{625.5, 922.5}, "Helvetica"})
 	pdf.AddPage()
 	pdf.SetFont("Helvetica", "", 14)
 	pdf.Text(444, 152, utf8toIso(r.FormValue("cedula")))
