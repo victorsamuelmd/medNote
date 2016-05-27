@@ -47,3 +47,14 @@ func CrearPDFRemision(rem io.Reader) (*gofpdf.Fpdf, error) {
 
 	return pdf, nil
 }
+
+type Remision struct {
+	Paciente         Usuario   `json:"paciente" bson:"paciente"`
+	Medico           Usuario   `json:"medico" bson:"medico"`
+	Receptor         string    `json:"receptor" bson:"receptor"`
+	Fecha            time.Time `json:"fecha" bson:"fecha"`
+	Servicio         string    `json:"servicio" bson:"servicio"`
+	Contenido        string    `json:"contenido" bson:"contenido"`
+	Diagnostico      string    `json:"diagnostico" bson:"diagnostico"`
+	TelefonoPaciente string    `json:"telefonoPaciente" bson:"telefonoPaciente"`
+}
