@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"time"
 
+	"github.com/bearbin/go-age"
 	"github.com/jung-kurt/gofpdf"
 )
 
@@ -48,6 +50,8 @@ func CrearPDFRemision(rem io.Reader) (*gofpdf.Fpdf, error) {
 	return pdf, nil
 }
 
+// Remision contiene la estructura de la información necesaria en caso de una
+// remisión
 type Remision struct {
 	Paciente         Usuario   `json:"paciente" bson:"paciente"`
 	Medico           Usuario   `json:"medico" bson:"medico"`
@@ -57,4 +61,40 @@ type Remision struct {
 	Contenido        string    `json:"contenido" bson:"contenido"`
 	Diagnostico      string    `json:"diagnostico" bson:"diagnostico"`
 	TelefonoPaciente string    `json:"telefonoPaciente" bson:"telefonoPaciente"`
+}
+
+// Usuario contiente la estructura de le información sobre un usuario tanto del
+// sistema como de un paciente
+type Usuario struct {
+	PrimerNombre    string `json:"primerNombre" bson:"primerNombre"`
+	SegundoNombre   string `json:"segundoNombre" bson:"segundoNombre"`
+	PrimerApellido  string `json:"primerApellido" bson:"primerApellido"`
+	SegundoApellido string `json:"segundoApellido" bson:"segundoApellido"`
+
+	Identificacion string `json:"identificacion" bson:"identificacion"`
+	TipoID         string `json:"tipoIdentificacion" bson:"tipoIdentificacion"`
+
+	Genero          string    `json:"genero" bson:"genero"`
+	FechaNacimiento time.Time `json:"fechaNacimiento" bson:"fechaNacimiento"`
+
+	NombreUsuario string `bson:"nombreUsuario" json:"nombreUsuario"`
+	Contraseña    string `bson:"contrasena" json:"contrasena,omitempty"`
+	Grupo         string `json:"grupo" bson:"grupo"`
+}
+
+// NombreCompleto devuelve el nombre completo del usuario siendo la union de
+// ambos nombres seguido de ambos apellidos
+func (u *Usuario) NombreCompleto() string {
+	return fmt.Sprintf("%s %s %s %s", u.PrimerNombre,
+		u.SegundoNombre, u.PrimerApellido, u.SegundoApellido)
+}
+
+// Nombres devuelve ambos nombres el usuario en un solo texto
+func (u *Usuario) Nombres() string {
+	return fmt.Sprintf("%s %s", u.PrimerNombre, u.SegundoNombre)
+}
+
+// Edad devuelve la edad del usuario en años cumplidos
+func (u *Usuario) Edad(t time.Time) string {
+	return fmt.Sprint(age.AgeAt(u.FechaNacimiento, t))
 }

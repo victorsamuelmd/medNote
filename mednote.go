@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/jung-kurt/gofpdf"
-	"github.com/justinas/alice"
 	"github.com/victorsamuelmd/mednote/general"
 )
 
@@ -25,7 +24,7 @@ func main() {
 	router.Handle("/static/", http.StripPrefix("/static/",
 		http.FileServer(http.Dir("./static"))))
 
-	router.Handle("/pdf", alice.New(logger).ThenFunc(ageneralPDF))
+	router.HandleFunc("/pdf", ageneralPDF)
 	router.HandleFunc("/remision", remisionPDF)
 	router.HandleFunc("/urgencia", urgenciaPDF)
 	router.HandleFunc("/formula", formulaPDF)
