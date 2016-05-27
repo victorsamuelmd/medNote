@@ -1,33 +1,17 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
-	"gopkg.in/mgo.v2/bson"
-
-	"github.com/gorilla/mux"
 	"github.com/jung-kurt/gofpdf"
 	"github.com/justinas/alice"
-	"github.com/manyminds/api2go/jsonapi"
 	"github.com/victorsamuelmd/mednote/general"
-)
-
-const (
-	MgoHostStr             = "localhost:27017"
-	NombreBaseDatos        = "mednote"
-	NombreCollecionUsuario = "usuario"
-	NombreBaseDatosTest    = "test"
-	NumeroPuertoAplicacion = ":8000"
-	TipoContenidoJSONAPI   = "application/vnd.api+json"
-	OrigenesConfiables     = "http://localhost:4200"
 )
 
 var (
@@ -36,201 +20,20 @@ var (
 
 func main() {
 
-	var ds = NewDataStore()
-
-	m := mux.NewRouter()
 	router := http.NewServeMux()
 
 	router.Handle("/static/", http.StripPrefix("/static/",
 		http.FileServer(http.Dir("./static"))))
-	router.Handle("/dist/", http.StripPrefix("/dist/",
-		http.FileServer(http.Dir("./dist"))))
 
 	router.Handle("/pdf", alice.New(logger).ThenFunc(ageneralPDF))
 	router.HandleFunc("/remision", remisionPDF)
 	router.HandleFunc("/urgencia", urgenciaPDF)
 	router.HandleFunc("/formula", formulaPDF)
-	m.HandleFunc("/token", ds.token)
-	m.Handle("/api/usuarios/{id:[0-9]{4,14}}", alice.New(proteger).
-		ThenFunc(ds.usuariosGET)).
-		Methods(http.MethodGet)
-
-	m.Handle("/api/usuarios", alice.New(proteger).
-		ThenFunc(ds.usuariosPOST)).
-		Methods(http.MethodPost)
 
 	fmt.Println("Listening on localhost:8000")
-	if err := http.ListenAndServe(NumeroPuertoAplicacion, router); err != nil {
+	if err := http.ListenAndServe(":8080", router); err != nil {
 		fmt.Print(err.Error())
 	}
-}
-
-func (store *DataStore) usuariosGET(w http.ResponseWriter, r *http.Request) {
-	ds := store.Copy()
-	defer ds.Session.Close()
-
-	usuarioId := mux.Vars(r)["id"]
-
-	usr := &Usuario{}
-	err := ds.Session.DB(NombreBaseDatos).
-		C(NombreCollecionUsuario).
-		Find(bson.M{"identificacion": usuarioId}).
-		Select(bson.M{"contrasena": 0}).
-		One(&usr)
-
-	if err != nil {
-		http.Error(w, fmt.Sprintf(
-			`{"errors": [{"title": "No encontrado", "detail": "%s"}]}`,
-			err.Error()), http.StatusNotFound)
-		return
-	}
-
-	j, err := jsonapi.Marshal(usr)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	_, err = fmt.Fprintf(w, "%s", j)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-/*
-	} else if r.Method == http.MethodGet {
-		var u []Usuario
-		err := store.session.DB(NombreBaseDatos).
-			C(NombreCollecionUsuario).Find(nil).
-			Select(bson.M{"contrasena": 0}).One(&u)
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
-
-		j, err := jsonapi.Marshal(u)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		_, err = fmt.Fprintf(w, "%s", j)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-*/
-
-func (store *DataStore) usuariosPOST(w http.ResponseWriter, r *http.Request) {
-	ds := store.Copy()
-	defer ds.Session.Close()
-
-	var j []byte
-	b := bytes.NewBuffer(j)
-	reader := bufio.NewReader(r.Body)
-	_, err := reader.WriteTo(b)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	u := &Usuario{}
-	err = jsonapi.Unmarshal(b.Bytes(), u)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	err = ds.Session.DB(NombreBaseDatos).
-		C(NombreCollecionUsuario).Insert(u)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	fmt.Fprintf(w, "%s", u)
-}
-
-func logger(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("\033[33m[%s] %s\033[0m\n",
-			time.Now().Format(time.Stamp), r.RequestURI)
-		next.ServeHTTP(w, r)
-	})
-}
-
-func proteger(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", TipoContenidoJSONAPI)
-		token := r.Header.Get("Authorization")
-		if len(token) == 0 {
-			http.Error(w, `{"errors": [{"title": "Fallo autorizacion",
-			"detail": "No fue provisto un token de autorizacion"}]}`,
-				http.StatusUnauthorized)
-			return
-		}
-		if ok := validarToken(strings.TrimPrefix(token, "Bearer ")); !ok {
-			http.Error(w, `{"errors": [{"title": "Fallo autorizacion",
-			"detail": "El token es inválido"}]}`, http.StatusUnauthorized)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-// activarCORS configura los encabezados para que se puedan realizar peticiones
-// desde un origen diferente. En caso de que el navegador solicite opciones
-// se comporta adecuadamente.
-func activarCORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Access-Control-Allow-Origin", OrigenesConfiables)
-		w.Header().Add("Access-Control-Allow-Methods", http.MethodPost)
-		w.Header().Add("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-		if r.Method == http.MethodOptions {
-			return
-		}
-
-		w.Header().Add("content-type", TipoContenidoJSONAPI)
-		next.ServeHTTP(w, r)
-	})
-}
-
-// token genera un JWT(javascript web token) usado como autorizacion para
-// acceder a la API del servidor, la petición del cliente debe ser un objeto en
-// JSON de la forma {"username": "", "password": ""} y devuelve un el token
-// codificado dentro de un objeto {"token": "<token>"}
-func (store *DataStore) token(w http.ResponseWriter, r *http.Request) {
-	ds := store.Copy()
-	defer ds.Session.Close()
-
-	db := ds.Session.DB(NombreBaseDatos)
-
-	var rd struct {
-		NombreUsuario string `json:"username"`
-		Contraseña    string `json:"password"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&rd); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	token, err := AutenticarUsuario(rd.NombreUsuario, rd.Contraseña, db)
-	if err != nil {
-		http.Error(w, "No autorizado", http.StatusUnauthorized)
-		return
-	}
-
-	if err := json.NewEncoder(w).Encode(
-		map[string]string{"token": token}); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 }
 
 func consultaJson(w http.ResponseWriter, r *http.Request) {
@@ -273,8 +76,7 @@ func ageneralPDF(w http.ResponseWriter, r *http.Request) {
 
 	pdf := gofpdf.New("P", "pt", "letter", "")
 	pdf.AddPage()
-	//	pdf.Image("frenteFormatoHistoria.png",
-	//		0, 0, 612, 792, false, "png", 0, "")
+
 	pdf.SetFont("Helvetica", "", 14)
 	pdf.Text(440, 195, utf8toIso(r.FormValue("cedula")))
 	pdf.Text(40, 185, utf8toIso(r.FormValue("papellido")))
@@ -324,10 +126,6 @@ func ageneralPDF(w http.ResponseWriter, r *http.Request) {
 	WriteItem("Diagnósticos: ", r.FormValue("diagnostico"), pdf)
 	WriteItem("Conducta: ", r.FormValue("conducta"), pdf)
 
-	if pdf.PageNo() == 2 {
-		//		pdf.Image("reversoFormatoHistoria.png",
-		//			0, 0, 612, 792, false, "png", 0, "")
-	}
 	if err := pdf.Output(w); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
