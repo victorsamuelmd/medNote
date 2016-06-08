@@ -53,6 +53,7 @@ func ageneralPDF(w http.ResponseWriter, r *http.Request) {
 		r.FormValue("pnombre"),
 		r.FormValue("snombre"),
 		r.FormValue("papellido"),
+		r.FormValue("sapellido"),
 		t.Format(time.RFC3339))
 
 	w.Header().Set("Content-Disposition",
@@ -109,7 +110,7 @@ func ageneralPDF(w http.ResponseWriter, r *http.Request) {
 	WriteItem("Análisis: ", r.FormValue("analisis"), pdf)
 	WriteItem("Diagnósticos: ", r.FormValue("diagnostico"), pdf)
 	WriteItem("Conducta: ", r.FormValue("conducta"), pdf)
-
+	
 	if err := pdf.Output(w); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
